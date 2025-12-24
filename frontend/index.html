@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Boost Shop</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .products {
+            display: grid;
+            gap: 20px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .product-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .product-price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .product-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .buy-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .buy-button:hover {
+            opacity: 0.9;
+        }
+
+        .buy-button:active {
+            transform: scale(0.98);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Trade Boost</h1>
+            <p>Индикаторы для профессионального трейдинга</p>
+        </div>
+
+        <div class="products" id="products"></div>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Товары
+        const products = [
+            {
+                id: 1,
+                name: 'RSI Pro',
+                price: 500,
+                description: 'Продвинутый индикатор RSI с дополнительными уровнями и сигналами. Идеален для определения перекупленности и перепроданности.',
+                category: 'TradingView'
+            },
+            {
+                id: 2,
+                name: 'MACD Advanced',
+                price: 700,
+                description: 'Улучшенный MACD с настраиваемыми параметрами и визуальными алертами. Помогает находить тренды и точки разворота.',
+                category: 'TradingView'
+            },
+            {
+                id: 3,
+                name: 'Volume Profile',
+                price: 1000,
+                description: 'Профессиональный инструмент для анализа объёмов. Показывает уровни максимального интереса участников рынка.',
+                category: 'TradingView'
+            }
+        ];
+
+        // Отображение товаров
+        function renderProducts() {
+            const container = document.getElementById('products');
+            
+            products.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="product-header">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-price">${product.price}₽</div>
+                    </div>
+                    <div class="product-description">${product.description}</div>
+                    <span class="badge">${product.category}</span>
+                    <button class="buy-button" onclick="buyProduct(${product.id})">
+                        Купить за ${product.price}₽
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Покупка товара
+        function buyProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            tg.showAlert(`Скоро здесь будет оплата ${product.name}!`);
+            
+            // Отправляем данные боту
+            tg.sendData(JSON.stringify({
+                action: 'buy',
+                productId: productId,
+                productName: product.name,
+                price: product.price
+            }));
+        }
+
+        // Запуск
+        renderProducts();
+    </script>
+</body>
+</html>
