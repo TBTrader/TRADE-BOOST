@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "crypto-bot-api": "^0.3.6"
+    "crypto-bot-api": "^0.3.6",
+    "node-fetch": "^2.7.0"
   }
 }

@@ -1,41 +1,51 @@
-const CryptoBotAPI = require('crypto-bot-api');
+const fetch = require('node-fetch');
 const db = require('./database');
 
-// Инициализация CryptoBot API
-const cryptoBot = new CryptoBotAPI(process.env.CRYPTO_BOT_TOKEN);
+const CRYPTO_BOT_API = 'https://testnet-pay.crypt.bot/api';
+const CRYPTO_BOT_TOKEN = process.env.CRYPTO_BOT_TOKEN;
 
 // Создание инвойса для оплаты
 async function createInvoice(productId, telegramId) {
   try {
-    // Получаем товар из БД
     const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
     if (!product) {
       throw new Error('Товар не найден');
     }
 
-    // Получаем пользователя
     const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId);
     if (!user) {
       throw new Error('Пользователь не найден');
     }
 
-    // Создаём инвойс в CryptoBot
-    const invoice = await cryptoBot.createInvoice({
-      amount: product.price,
-      currency_type: 'fiat',
-      fiat: 'RUB',
-      asset: 'USDT',
-      description: product.name,
-      paid_btn_name: 'callback',
-      paid_btn_url: 'https://t.me/your_bot',
-      payload: JSON.stringify({
-        product_id: productId,
-        user_id: user.id,
-        telegram_id: telegramId
+    // Создаём инвойс через прямой HTTP запрос
+    const response = await fetch(`${CRYPTO_BOT_API}/createInvoice`, {
+      method: 'POST',
+      headers: {
+        'Crypto-Pay-API-Token': CRYPTO_BOT_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        amount: product.price,
+        currency_type: 'fiat',
+        fiat: 'RUB',
+        asset: 'USDT',
+        description: product.name,
+        paid_btn_name: 'callback',
+        payload: JSON.stringify({
+          product_id: productId,
+          user_id: user.id,
+          telegram_id: telegramId
+        })
       })
     });
 
-    // Сохраняем покупку в БД со статусом pending
+    const data = await response.json();
+
+    if (!data.ok) {
+      throw new Error(data.error?.name || 'Ошибка создания инвойса');
+    }
+
+    // Сохраняем покупку в БД
     const stmt = db.prepare(`
       INSERT INTO purchases (user_id, product_id, amount, status)
       VALUES (?, ?, ?, 'pending')
@@ -44,8 +54,8 @@ async function createInvoice(productId, telegramId) {
 
     return {
       success: true,
-      pay_url: invoice.pay_url,
-      invoice_id: invoice.invoice_id
+      pay_url: data.result.pay_url,
+      invoice_id: data.result.invoice_id
     };
   } catch (error) {
     console.error('Ошибка создания инвойса:', error);
@@ -59,7 +69,6 @@ function handlePaymentUpdate(update) {
     if (update.status === 'paid') {
       const payload = JSON.parse(update.payload);
       
-      // Обновляем статус покупки
       const stmt = db.prepare(`
         UPDATE purchases 
         SET status = 'paid' 
