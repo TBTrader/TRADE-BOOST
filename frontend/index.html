@@ -1,197 +1,329 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Boost Shop</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trade Boost Shop</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
 
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
 
-        .header h1 {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
 
-        .header p {
-            font-size: 16px;
-            opacity: 0.9;
-        }
+    .header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
 
-        .products {
-            display: grid;
-            gap: 20px;
-        }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
 
-        .product-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
-        }
+    .tab {
+      flex: 1;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
 
-        .product-card:hover {
-            transform: translateY(-5px);
-        }
+    .tab.active {
+      background: white;
+      color: #667eea;
+    }
 
-        .product-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
+    .products {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
 
-        .product-name {
-            font-size: 22px;
-            font-weight: bold;
-            color: #333;
-        }
+    .product-card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
-        .product-price {
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
-        }
+    .product-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
 
-        .product-description {
-            color: #666;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
+    .product-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+    }
 
-        .buy-button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
+    .product-price {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+    }
 
-        .buy-button:hover {
-            opacity: 0.9;
-        }
+    .product-description {
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 15px;
+    }
 
-        .buy-button:active {
-            transform: scale(0.98);
-        }
+    .product-badge {
+      display: inline-block;
+      background: #f0f0f0;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 15px;
+    }
 
-        .badge {
-            display: inline-block;
-            padding: 5px 12px;
-            background: #f0f0f0;
-            border-radius: 20px;
-            font-size: 12px;
-            color: #666;
-            margin-top: 10px;
-        }
-    </style>
+    .buy-button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .buy-button:active {
+      transform: scale(0.98);
+    }
+
+    .buy-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .purchases {
+      display: none;
+    }
+
+    .purchases.active {
+      display: block;
+    }
+
+    .purchase-card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+
+    .purchase-date {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 10px;
+    }
+
+    .purchase-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .purchase-status {
+      display: inline-block;
+      padding: 5px 10px;
+      background: #4caf50;
+      color: white;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+
+    .loading {
+      text-align: center;
+      color: white;
+      padding: 40px;
+      font-size: 18px;
+    }
+
+    .empty {
+      text-align: center;
+      color: white;
+      padding: 40px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🚀 Trade Boost</h1>
-            <p>Индикаторы для профессионального трейдинга</p>
-        </div>
-
-        <div class="products" id="products"></div>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 Trade Boost</h1>
+      <p>Индикаторы для профессионального трейдинга</p>
     </div>
 
-    <script>
-        // Инициализация Telegram Web App
-        let tg = window.Telegram.WebApp;
-        tg.expand();
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('products')">Каталог</button>
+      <button class="tab" onclick="showTab('purchases')">Мои покупки</button>
+    </div>
 
-        // Товары
-        const products = [
-            {
-                id: 1,
-                name: 'RSI Pro',
-                price: 500,
-                description: 'Продвинутый индикатор RSI с дополнительными уровнями и сигналами. Идеален для определения перекупленности и перепроданности.',
-                category: 'TradingView'
-            },
-            {
-                id: 2,
-                name: 'MACD Advanced',
-                price: 700,
-                description: 'Улучшенный MACD с настраиваемыми параметрами и визуальными алертами. Помогает находить тренды и точки разворота.',
-                category: 'TradingView'
-            },
-            {
-                id: 3,
-                name: 'Volume Profile',
-                price: 1000,
-                description: 'Профессиональный инструмент для анализа объёмов. Показывает уровни максимального интереса участников рынка.',
-                category: 'TradingView'
-            }
-        ];
+    <div id="products" class="products">
+      <div class="loading">Загрузка товаров...</div>
+    </div>
 
-        // Отображение товаров
-        function renderProducts() {
-            const container = document.getElementById('products');
-            
-            products.forEach(product => {
-                const card = document.createElement('div');
-                card.className = 'product-card';
-                card.innerHTML = `
-                    <div class="product-header">
-                        <div class="product-name">${product.name}</div>
-                        <div class="product-price">${product.price}₽</div>
-                    </div>
-                    <div class="product-description">${product.description}</div>
-                    <span class="badge">${product.category}</span>
-                    <button class="buy-button" onclick="buyProduct(${product.id})">
-                        Купить за ${product.price}₽
-                    </button>
-                `;
-                container.appendChild(card);
-            });
+    <div id="purchases" class="purchases">
+      <div class="loading">Загрузка покупок...</div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    const API_URL = 'http://localhost:3000/api';
+    const user = tg.initDataUnsafe?.user;
+
+    // Переключение вкладок
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      document.getElementById('products').style.display = tab === 'products' ? 'flex' : 'none';
+      document.getElementById('purchases').style.display = tab === 'purchases' ? 'block' : 'none';
+      
+      if (tab === 'purchases') {
+        loadPurchases();
+      }
+    }
+
+    // Загрузка товаров
+    async function loadProducts() {
+      try {
+        const response = await fetch(`${API_URL}/products`);
+        const products = await response.json();
+        
+        const productsDiv = document.getElementById('products');
+        productsDiv.innerHTML = products.map(product => `
+          <div class="product-card">
+            <div class="product-header">
+              <div class="product-title">${product.name}</div>
+              <div class="product-price">${product.price}₽</div>
+            </div>
+            <div class="product-description">${product.description}</div>
+            <div class="product-badge">TradingView</div>
+            <button class="buy-button" onclick="buyProduct(${product.id})">
+              Купить за ${product.price}₽
+            </button>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Ошибка загрузки товаров:', error);
+        document.getElementById('products').innerHTML = 
+          '<div class="empty">Ошибка загрузки товаров</div>';
+      }
+    }
+
+    // Покупка товара
+    async function buyProduct(productId) {
+      if (!user) {
+        tg.showAlert('Ошибка: не удалось получить данные пользователя');
+        return;
+      }
+
+      const button = event.target;
+      button.disabled = true;
+      button.textContent = 'Создание инвойса...';
+
+      try {
+        const response = await fetch(`${API_URL}/create-invoice`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product_id: productId,
+            telegram_id: user.id,
+            username: user.username,
+            first_name: user.first_name
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          tg.openLink(result.pay_url);
+        } else {
+          tg.showAlert('Ошибка создания платежа: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Ошибка:', error);
+        tg.showAlert('Ошибка создания платежа');
+      } finally {
+        button.disabled = false;
+        button.textContent = button.textContent.replace('Создание инвойса...', 'Купить');
+      }
+    }
+
+    // Загрузка покупок
+    async function loadPurchases() {
+      if (!user) return;
+
+      try {
+        const response = await fetch(`${API_URL}/purchases/${user.id}`);
+        const purchases = await response.json();
+        
+        const purchasesDiv = document.getElementById('purchases');
+        
+        if (purchases.length === 0) {
+          purchasesDiv.innerHTML = '<div class="empty">У вас пока нет покупок</div>';
+          return;
         }
 
-        // Покупка товара
-        function buyProduct(productId) {
-            const product = products.find(p => p.id === productId);
-            tg.showAlert(`Скоро здесь будет оплата ${product.name}!`);
-            
-            // Отправляем данные боту
-            tg.sendData(JSON.stringify({
-                action: 'buy',
-                productId: productId,
-                productName: product.name,
-                price: product.price
-            }));
-        }
+        purchasesDiv.innerHTML = purchases.map(purchase => `
+          <div class="purchase-card">
+            <div class="purchase-date">${new Date(purchase.created_at).toLocaleDateString('ru-RU')}</div>
+            <div class="purchase-name">${purchase.name}</div>
+            <div class="purchase-description">${purchase.description}</div>
+            <div class="purchase-status">Оплачено</div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Ошибка загрузки покупок:', error);
+        document.getElementById('purchases').innerHTML = 
+          '<div class="empty">Ошибка загрузки покупок</div>';
+      }
+    }
 
-        // Запуск
-        renderProducts();
-    </script>
+    // Загружаем товары при старте
+    loadProducts();
+  </script>
 </body>
 </html>

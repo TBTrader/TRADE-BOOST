@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "crypto-bot-api": "^0.3.6"
+  }
+}
