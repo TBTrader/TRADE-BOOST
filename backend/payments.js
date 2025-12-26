@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 const db = require('./database');
 
-const CRYPTO_BOT_API = 'https://testnet-pay.crypt.bot/api';
+const CRYPTO_BOT_API = 'https://pay.crypt.bot/api';
 const CRYPTO_BOT_TOKEN = process.env.CRYPTO_BOT_TOKEN;
 
 // Создание инвойса для оплаты
