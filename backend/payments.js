@@ -31,6 +31,7 @@ async function createInvoice(productId, telegramId) {
         asset: 'USDT',
         description: product.name,
         paid_btn_name: 'callback',
+paid_btn_url: 'https://tbtrader.github.io/TRADE-BOOST/',
         payload: JSON.stringify({
           product_id: productId,
           user_id: user.id,
