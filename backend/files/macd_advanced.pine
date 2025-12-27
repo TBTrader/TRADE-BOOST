@@ -1,0 +1,42 @@
+//@version=5
+indicator("MACD Advanced - Trade Boost", overlay=false)
+
+// Параметры
+fastLength = input.int(12, "Fast Length", minval=1)
+slowLength = input.int(26, "Slow Length", minval=1)
+signalLength = input.int(9, "Signal Length", minval=1)
+source = input.source(close, "Source")
+
+// Расчёт MACD
+[macdLine, signalLine, histLine] = ta.macd(source, fastLength, slowLength, signalLength)
+
+// Дополнительные расчёты
+macdTrend = macdLine > signalLine ? 1 : -1
+histColor = histLine > 0 ? (histLine > histLine[1] ? color.new(color.green, 0) : color.new(color.green, 50)) : (histLine < histLine[1] ? color.new(color.red, 0) : color.new(color.red, 50))
+
+// Отображение
+plot(macdLine, "MACD", color=color.blue, linewidth=2)
+plot(signalLine, "Signal", color=color.orange, linewidth=2)
+plot(histLine, "Histogram", color=histColor, style=plot.style_columns)
+
+hline(0, "Zero Line", color=color.gray, linestyle=hline.style_solid)
+
+// Сигналы
+bullishCross = ta.crossover(macdLine, signalLine)
+bearishCross = ta.crossunder(macdLine, signalLine)
+
+plotshape(bullishCross, "Buy", shape.triangleup, location.bottom, color.green, size=size.small)
+plotshape(bearishCross, "Sell", shape.triangledown, location.top, color.red, size=size.small)
+
+// Дивергенции
+bullishDiv = histLine > 0 and histLine < histLine[1] and low < low[1]
+bearishDiv = histLine < 0 and histLine > histLine[1] and high > high[1]
+
+bgcolor(bullishDiv ? color.new(color.green, 90) : na, title="Bullish Divergence")
+bgcolor(bearishDiv ? color.new(color.red, 90) : na, title="Bearish Divergence")
+
+// Алерты
+alertcondition(bullishCross, "MACD Buy", "MACD crossed above Signal")
+alertcondition(bearishCross, "MACD Sell", "MACD crossed below Signal")
+alertcondition(bullishDiv, "Bullish Divergence", "Potential bullish divergence detected")
+alertcondition(bearishDiv, "Bearish Divergence", "Potential bearish divergence detected")

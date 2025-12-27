@@ -139,14 +139,34 @@ app.post('/api/crypto-webhook', async (req, res) => {
       const product = db.prepare('SELECT * FROM products WHERE id = ?').get(payload.product_id);
       
       // Отправляем сообщение пользователю
-      await bot.telegram.sendMessage(
-        payload.telegram_id,
-        `✅ Оплата получена!\n\n` +
-        `📦 Товар: ${product.name}\n` +
-        `💵 Сумма: ${invoice.amount} ${invoice.asset}\n\n` +
-        `Спасибо за покупку! 🎉\n` +
-        `Файлы будут отправлены в ближайшее время.`
-      );
+await bot.telegram.sendMessage(
+  payload.telegram_id,
+  `✅ Оплата получена!\n\n` +
+  `📦 Товар: ${product.name}\n` +
+  `💵 Сумма: ${invoice.amount} ${invoice.asset}\n\n` +
+  `Спасибо за покупку! 🎉`
+);
+
+// Отправляем файл индикатора
+if (product.file_url) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join(__dirname, product.file_url);
+    
+    await bot.telegram.sendDocument(
+      payload.telegram_id,
+      { source: filePath },
+      { 
+        caption: `📄 ${product.name}\n\nИнструкция по установке:\n1. Откройте TradingView\n2. Pine Editor → Открыть\n3. Вставьте код из файла\n4. Сохранить → Добавить на график` 
+      }
+    );
+    
+    console.log(`📤 Файл отправлен пользователю ${payload.telegram_id}`);
+  } catch (error) {
+    console.error('❌ Ошибка отправки файла:', error);
+  }
+}
       
       console.log(`✅ Покупка обработана для пользователя ${payload.telegram_id}`);
     }

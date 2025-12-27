@@ -1,0 +1,37 @@
+//@version=5
+indicator("RSI Pro - Trade Boost", overlay=false)
+
+// Параметры
+rsiLength = input.int(14, "RSI Period", minval=1)
+rsiSource = input.source(close, "Source")
+overbought = input.int(70, "Overbought Level", minval=50, maxval=100)
+oversold = input.int(30, "Oversold Level", minval=0, maxval=50)
+
+// Расчёт RSI
+rsiValue = ta.rsi(rsiSource, rsiLength)
+
+// Расчёт дополнительных уровней
+rsiMA = ta.sma(rsiValue, 9)
+
+// Отображение
+plot(rsiValue, "RSI", color=color.blue, linewidth=2)
+plot(rsiMA, "RSI MA", color=color.orange, linewidth=1)
+
+hline(overbought, "Overbought", color=color.red, linestyle=hline.style_dashed)
+hline(50, "Midline", color=color.gray, linestyle=hline.style_dotted)
+hline(oversold, "Oversold", color=color.green, linestyle=hline.style_dashed)
+
+// Заливка зон
+bgcolor(rsiValue > overbought ? color.new(color.red, 90) : na)
+bgcolor(rsiValue < oversold ? color.new(color.green, 90) : na)
+
+// Сигналы
+bullishSignal = ta.crossover(rsiValue, oversold)
+bearishSignal = ta.crossunder(rsiValue, overbought)
+
+plotshape(bullishSignal, "Buy Signal", shape.triangleup, location.bottom, color.green, size=size.small)
+plotshape(bearishSignal, "Sell Signal", shape.triangledown, location.top, color.red, size=size.small)
+
+// Алерты
+alertcondition(bullishSignal, "RSI Buy", "RSI crossed above oversold level")
+alertcondition(bearishSignal, "RSI Sell", "RSI crossed below overbought level")
