@@ -178,9 +178,21 @@ if (product.file_url) {
   }
 });
 
-// Запуск бота
-bot.launch();
-console.log('🤖 Бот запущен!');
+// Запуск бота через webhook (для продакшена)
+if (process.env.NODE_ENV === 'production') {
+  // Используем webhook
+  const WEBHOOK_DOMAIN = 'https://trade-boost.onrender.com';
+  bot.telegram.setWebhook(`${WEBHOOK_DOMAIN}/telegram-webhook`);
+  
+  // Endpoint для webhook
+  app.use(bot.webhookCallback('/telegram-webhook'));
+  
+  console.log('🤖 Бот запущен через webhook');
+} else {
+  // Локально используем polling
+  bot.launch();
+  console.log('🤖 Бот запущен через polling');
+}
 
 // Запуск сервера
 const PORT = process.env.PORT || 3000;
