@@ -110,24 +110,52 @@ app.post('/api/create-invoice', async (req, res) => {
 });
 
 // Webhook для получения уведомлений от CryptoBot
-app.post('/api/crypto-webhook', (req, res) => {
-  const update = req.body;
-  const result = payments.handlePaymentUpdate(update);
+// Webhook для получения уведомлений от CryptoBot
+app.post('/api/crypto-webhook', async (req, res) => {
+  console.log('📩 Получен webhook от CryptoBot:', JSON.stringify(req.body, null, 2));
   
-  if (result.success) {
-    // Получаем товар
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(result.product_id);
+  try {
+    const update = req.body;
     
-    // Отправляем пользователю сообщение
-    bot.telegram.sendMessage(
-      result.telegram_id,
-      `✅ Оплата прошла успешно!\n\n` +
-      `Вы купили: ${product.name}\n` +
-      `Спасибо за покупку! 🎉`
-    );
+    // CryptoBot отправляет данные в поле update_type и payload
+    if (update.update_type === 'invoice_paid') {
+      const invoice = update.payload;
+      console.log('💰 Инвойс оплачен:', invoice.invoice_id);
+      
+      // Парсим payload который мы передали при создании
+      const payload = JSON.parse(invoice.payload);
+      
+      // Обновляем статус покупки
+      const stmt = db.prepare(`
+        UPDATE purchases 
+        SET status = 'paid' 
+        WHERE user_id = ? AND product_id = ? AND status = 'pending'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `);
+      stmt.run(payload.user_id, payload.product_id);
+      
+      // Получаем информацию о товаре
+      const product = db.prepare('SELECT * FROM products WHERE id = ?').get(payload.product_id);
+      
+      // Отправляем сообщение пользователю
+      await bot.telegram.sendMessage(
+        payload.telegram_id,
+        `✅ Оплата получена!\n\n` +
+        `📦 Товар: ${product.name}\n` +
+        `💵 Сумма: ${invoice.amount} ${invoice.asset}\n\n` +
+        `Спасибо за покупку! 🎉\n` +
+        `Файлы будут отправлены в ближайшее время.`
+      );
+      
+      console.log(`✅ Покупка обработана для пользователя ${payload.telegram_id}`);
+    }
+    
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('❌ Ошибка обработки webhook:', error);
+    res.status(500).json({ ok: false, error: error.message });
   }
-  
-  res.json({ ok: true });
 });
 
 // Запуск бота
