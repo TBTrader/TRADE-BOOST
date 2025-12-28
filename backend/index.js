@@ -266,9 +266,9 @@ app.get('/api/admin/users', (req, res) => {
         u.first_name,
         u.created_at,
         COUNT(p.id) as purchases_count,
-        COALESCE(SUM(p.amount), 0) as total_spent
+        COALESCE(SUM(CASE WHEN p.status = 'paid' THEN p.amount ELSE 0 END), 0) as total_spent
       FROM users u
-      LEFT JOIN purchases p ON u.id = p.user_id AND p.status = 'paid'
+      LEFT JOIN purchases p ON u.id = p.user_id
       GROUP BY u.id
       ORDER BY u.created_at DESC
     `).all();
@@ -276,6 +276,23 @@ app.get('/api/admin/users', (req, res) => {
     res.json(users);
   } catch (error) {
     console.error('Error getting users:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+// Get user statistics
+app.get('/api/admin/user-stats', (req, res) => {
+  try {
+    const stats = db.prepare(`
+      SELECT 
+        COUNT(*) as total_users,
+        COUNT(CASE WHEN id IN (SELECT DISTINCT user_id FROM purchases WHERE status = 'paid') THEN 1 END) as paying_users,
+        COUNT(CASE WHEN id NOT IN (SELECT DISTINCT user_id FROM purchases WHERE status = 'paid') THEN 1 END) as non_paying_users
+      FROM users
+    `).get();
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting user stats:', error);
     res.status(500).json({ error: error.message });
   }
 });
