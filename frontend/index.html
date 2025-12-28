@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trade Boost — AI Trading Indicators</title>
+  <title>TRADE BOOST TERMINAL</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -16,30 +16,90 @@
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+      font-family: 'IBM Plex Mono', 'Courier New', monospace;
+      background: #0d0d0d;
       min-height: 100vh;
-      color: #ffffff;
+      color: #00ff41;
       overflow-x: hidden;
+      position: relative;
     }
 
-    /* Animated background */
+    /* Scanline effect */
     body::before {
       content: '';
       position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(88, 101, 242, 0.1) 0%, transparent 50%);
-      animation: rotate 20s linear infinite;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
       pointer-events: none;
-      z-index: 0;
+      z-index: 1000;
+      animation: scanline 8s linear infinite;
     }
 
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    @keyframes scanline {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(100%); }
+    }
+
+    /* CRT flicker */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(18, 16, 16, 0.1);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
+      animation: flicker 0.15s infinite;
+    }
+
+    @keyframes flicker {
+      0% { opacity: 0.27861; }
+      5% { opacity: 0.34769; }
+      10% { opacity: 0.23604; }
+      15% { opacity: 0.90626; }
+      20% { opacity: 0.18128; }
+      25% { opacity: 0.83891; }
+      30% { opacity: 0.65583; }
+      35% { opacity: 0.67807; }
+      40% { opacity: 0.26559; }
+      45% { opacity: 0.84693; }
+      50% { opacity: 0.96019; }
+      55% { opacity: 0.08594; }
+      60% { opacity: 0.20313; }
+      65% { opacity: 0.71988; }
+      70% { opacity: 0.53455; }
+      75% { opacity: 0.37288; }
+      80% { opacity: 0.71428; }
+      85% { opacity: 0.70419; }
+      90% { opacity: 0.7003; }
+      95% { opacity: 0.36108; }
+      100% { opacity: 0.24387; }
+    }
+
+    /* Grid background */
+    .background-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: 0;
     }
 
     .container {
@@ -55,86 +115,100 @@
       text-align: center;
       margin-bottom: 40px;
       padding: 30px 0;
+      border-bottom: 2px solid rgba(0, 255, 65, 0.2);
+      position: relative;
+    }
+
+    .terminal-line {
+      color: rgba(0, 255, 65, 0.5);
+      font-size: 12px;
+      margin-bottom: 10px;
+      font-family: 'VT323', monospace;
+      letter-spacing: 2px;
     }
 
     .logo {
-      font-size: 48px;
-      margin-bottom: 10px;
-      filter: drop-shadow(0 0 20px rgba(88, 101, 242, 0.5));
-      animation: float 3s ease-in-out infinite;
+      font-size: 64px;
+      margin-bottom: 15px;
+      text-shadow: 
+        0 0 10px rgba(0, 255, 65, 0.8),
+        0 0 20px rgba(0, 255, 65, 0.5),
+        0 0 30px rgba(0, 255, 65, 0.3);
+      animation: pulse 2s ease-in-out infinite;
+      font-family: 'VT323', monospace;
     }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; text-shadow: 0 0 10px rgba(0, 255, 65, 0.8), 0 0 20px rgba(0, 255, 65, 0.5); }
+      50% { opacity: 0.8; text-shadow: 0 0 20px rgba(0, 255, 65, 1), 0 0 30px rgba(0, 255, 65, 0.7); }
     }
 
     .header h1 {
       font-size: 32px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-weight: 700;
+      color: #00ff41;
       margin-bottom: 8px;
-      letter-spacing: -0.5px;
+      letter-spacing: 4px;
+      font-family: 'VT323', monospace;
+      text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
     }
 
     .header p {
-      font-size: 14px;
-      color: #8b8b9a;
+      font-size: 11px;
+      color: rgba(0, 255, 65, 0.6);
       font-weight: 500;
-      letter-spacing: 0.5px;
+      letter-spacing: 3px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .blinking-cursor {
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
     }
 
     /* Tabs */
     .tabs {
       display: flex;
-      gap: 12px;
+      gap: 0;
       margin-bottom: 30px;
-      background: rgba(255, 255, 255, 0.03);
-      backdrop-filter: blur(10px);
-      border-radius: 16px;
-      padding: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(20, 20, 20, 0.8);
+      border: 2px solid rgba(0, 255, 65, 0.3);
+      border-radius: 0;
+      overflow: hidden;
     }
 
     .tab {
       flex: 1;
-      padding: 14px;
+      padding: 16px;
       background: transparent;
       border: none;
-      border-radius: 12px;
-      color: #8b8b9a;
-      font-size: 15px;
+      border-right: 2px solid rgba(0, 255, 65, 0.3);
+      color: rgba(0, 255, 65, 0.5);
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
+      transition: all 0.2s;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
 
-    .tab::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
-      opacity: 0;
-      transition: opacity 0.3s;
-      border-radius: 12px;
-      z-index: -1;
+    .tab:last-child {
+      border-right: none;
+    }
+
+    .tab:hover {
+      background: rgba(0, 255, 65, 0.05);
     }
 
     .tab.active {
-      color: #ffffff;
-      box-shadow: 0 4px 20px rgba(88, 101, 242, 0.3);
-    }
-
-    .tab.active::before {
-      opacity: 1;
+      background: rgba(0, 255, 65, 0.15);
+      color: #00ff41;
+      text-shadow: 0 0 8px rgba(0, 255, 65, 0.8);
     }
 
     /* Products Grid */
@@ -145,14 +219,12 @@
     }
 
     .product-card {
-      background: rgba(255, 255, 255, 0.03);
-      backdrop-filter: blur(20px);
-      border-radius: 20px;
+      background: rgba(13, 13, 13, 0.95);
+      border: 2px solid rgba(0, 255, 65, 0.3);
       padding: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
-      overflow: hidden;
+      transition: all 0.3s;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
     }
 
     .product-card::before {
@@ -160,17 +232,19 @@
       position: absolute;
       top: 0;
       left: 0;
-      width: 100%;
+      width: 4px;
       height: 100%;
-      background: radial-gradient(circle at top right, rgba(88, 101, 242, 0.1), transparent 70%);
+      background: linear-gradient(180deg, #00ff41, transparent);
       opacity: 0;
       transition: opacity 0.3s;
     }
 
     .product-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(88, 101, 242, 0.3);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      border-color: #00ff41;
+      box-shadow: 
+        0 0 20px rgba(0, 255, 65, 0.3),
+        inset 0 0 30px rgba(0, 0, 0, 0.5);
+      transform: translateX(4px);
     }
 
     .product-card:hover::before {
@@ -182,94 +256,87 @@
       justify-content: space-between;
       align-items: start;
       margin-bottom: 16px;
-      position: relative;
-      z-index: 1;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(0, 255, 65, 0.2);
     }
 
     .product-title {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
-      color: #ffffff;
-      letter-spacing: -0.5px;
+      color: #00ff41;
+      letter-spacing: 2px;
+      font-family: 'VT323', monospace;
+      text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
     }
 
     .product-price {
-      font-size: 26px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-size: 24px;
+      font-weight: 700;
+      color: #00ff41;
+      font-family: 'VT323', monospace;
+      text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
     }
 
     .product-description {
-      color: #8b8b9a;
+      color: rgba(0, 255, 65, 0.7);
       line-height: 1.6;
       margin-bottom: 16px;
-      font-size: 14px;
-      position: relative;
-      z-index: 1;
+      font-size: 13px;
+      font-family: 'IBM Plex Mono', monospace;
     }
 
     .product-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: rgba(88, 101, 242, 0.15);
+      gap: 8px;
+      background: transparent;
       padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #5865f2;
+      border: 1px solid rgba(0, 255, 65, 0.4);
+      font-size: 11px;
+      color: rgba(0, 255, 65, 0.8);
       font-weight: 600;
       margin-bottom: 16px;
-      border: 1px solid rgba(88, 101, 242, 0.2);
-      position: relative;
-      z-index: 1;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 1px;
     }
 
     .product-badge::before {
-      content: '⚡';
-      font-size: 14px;
+      content: '>';
+      color: #00ff41;
     }
 
     .buy-button {
       width: 100%;
       padding: 16px;
-      background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 16px;
+      background: rgba(0, 255, 65, 0.1);
+      color: #00ff41;
+      border: 2px solid #00ff41;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 8px 24px rgba(88, 101, 242, 0.3);
+      transition: all 0.2s;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       position: relative;
       overflow: hidden;
-      z-index: 1;
     }
 
     .buy-button::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
+      content: '> ';
+      margin-right: 8px;
     }
 
     .buy-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 32px rgba(88, 101, 242, 0.4);
+      background: rgba(0, 255, 65, 0.2);
+      box-shadow: 
+        0 0 20px rgba(0, 255, 65, 0.5),
+        inset 0 0 20px rgba(0, 255, 65, 0.1);
+      text-shadow: 0 0 8px rgba(0, 255, 65, 0.8);
     }
 
-    .buy-button:active::before {
-      width: 300px;
-      height: 300px;
+    .buy-button:active {
+      transform: scale(0.98);
     }
 
     .buy-button:disabled {
@@ -288,125 +355,153 @@
     }
 
     .purchase-card {
-      background: rgba(255, 255, 255, 0.03);
-      backdrop-filter: blur(20px);
-      border-radius: 20px;
+      background: rgba(13, 13, 13, 0.95);
+      border: 2px solid rgba(0, 255, 65, 0.3);
       padding: 24px;
       margin-bottom: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
       transition: all 0.3s;
     }
 
     .purchase-card:hover {
-      border-color: rgba(88, 101, 242, 0.3);
+      border-color: #00ff41;
     }
 
     .purchase-date {
-      font-size: 12px;
-      color: #8b8b9a;
+      font-size: 11px;
+      color: rgba(0, 255, 65, 0.5);
       margin-bottom: 12px;
       font-weight: 500;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 1px;
+    }
+
+    .purchase-date::before {
+      content: '[';
+      margin-right: 4px;
+    }
+
+    .purchase-date::after {
+      content: ']';
+      margin-left: 4px;
     }
 
     .purchase-name {
       font-size: 20px;
       font-weight: 700;
-      color: #ffffff;
+      color: #00ff41;
       margin-bottom: 8px;
-      letter-spacing: -0.5px;
+      letter-spacing: 2px;
+      font-family: 'VT323', monospace;
+      text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
     }
 
     .purchase-description {
-      font-size: 14px;
-      color: #8b8b9a;
+      font-size: 13px;
+      color: rgba(0, 255, 65, 0.7);
       margin-bottom: 12px;
       line-height: 1.5;
+      font-family: 'IBM Plex Mono', monospace;
     }
 
     .purchase-status {
       display: inline-block;
-      padding: 8px 14px;
-      background: rgba(76, 175, 80, 0.15);
-      color: #4caf50;
-      border-radius: 8px;
-      font-size: 12px;
+      padding: 6px 12px;
+      background: transparent;
+      color: #00ff41;
+      border: 1px solid #00ff41;
+      font-size: 11px;
       font-weight: 600;
-      border: 1px solid rgba(76, 175, 80, 0.2);
       margin-bottom: 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 1px;
+    }
+
+    .purchase-status::before {
+      content: '✓ ';
+      margin-right: 4px;
     }
 
     .download-button {
       width: 100%;
       padding: 14px;
-      background: rgba(76, 175, 80, 0.15);
-      color: #4caf50;
-      border: 1px solid rgba(76, 175, 80, 0.3);
-      border-radius: 12px;
-      font-size: 14px;
+      background: rgba(0, 255, 65, 0.1);
+      color: #00ff41;
+      border: 2px solid #00ff41;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.2s;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .download-button::before {
+      content: '↓ ';
+      margin-right: 8px;
     }
 
     .download-button:hover {
-      background: rgba(76, 175, 80, 0.25);
-      transform: translateY(-2px);
+      background: rgba(0, 255, 65, 0.2);
+      box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
     }
 
     .download-button:active {
-      transform: translateY(0);
+      transform: scale(0.98);
     }
 
     /* Loading & Empty States */
     .loading, .empty {
       text-align: center;
-      color: #8b8b9a;
+      color: rgba(0, 255, 65, 0.6);
       padding: 60px 20px;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 500;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 2px;
     }
 
     .loading::before {
-      content: '⚡';
-      font-size: 48px;
+      content: '█';
+      font-size: 32px;
       display: block;
       margin-bottom: 16px;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+      animation: blink 1s infinite;
+      font-family: 'VT323', monospace;
     }
 
     .empty::before {
-      content: '📦';
-      font-size: 48px;
+      content: '[EMPTY]';
+      font-size: 24px;
       display: block;
       margin-bottom: 16px;
       opacity: 0.5;
+      font-family: 'VT323', monospace;
     }
   </style>
 </head>
 <body>
+  <div class="background-grid"></div>
+  
   <div class="container">
     <div class="header">
+      <div class="terminal-line">&gt; SYSTEM ONLINE_</div>
       <div class="logo">⚡</div>
-      <h1>Trade Boost</h1>
-      <p>AI-POWERED TRADING INDICATORS</p>
+      <h1>TRADE BOOST</h1>
+      <p>AI TRADING INDICATORS<span class="blinking-cursor">_</span></p>
     </div>
 
     <div class="tabs">
-      <button class="tab active" onclick="showTab('products')">Каталог</button>
-      <button class="tab" onclick="showTab('purchases')">Мои покупки</button>
+      <button class="tab active" onclick="showTab('products')">CATALOG</button>
+      <button class="tab" onclick="showTab('purchases')">MY PURCHASES</button>
     </div>
 
     <div id="products" class="products">
-      <div class="loading">Загрузка индикаторов...</div>
+      <div class="loading">LOADING DATA</div>
     </div>
 
     <div id="purchases" class="purchases">
-      <div class="loading">Загрузка покупок...</div>
+      <div class="loading">LOADING PURCHASES</div>
     </div>
   </div>
 
@@ -418,7 +513,6 @@
     const API_URL = 'https://trade-boost.onrender.com/api';
     const user = tg.initDataUnsafe?.user;
 
-    // Переключение вкладок
     function showTab(tab) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
@@ -431,7 +525,6 @@
       }
     }
 
-    // Загрузка товаров
     async function loadProducts() {
       try {
         const response = await fetch(`${API_URL}/products`);
@@ -447,27 +540,26 @@
             <div class="product-description">${product.description}</div>
             <div class="product-badge">TradingView Compatible</div>
             <button class="buy-button" onclick="buyProduct(${product.id})">
-              Купить за ${product.price}₽
+              Purchase ${product.price}₽
             </button>
           </div>
         `).join('');
       } catch (error) {
-        console.error('Ошибка загрузки товаров:', error);
+        console.error('Error loading products:', error);
         document.getElementById('products').innerHTML = 
-          '<div class="empty">Ошибка загрузки индикаторов</div>';
+          '<div class="empty">ERROR LOADING DATA</div>';
       }
     }
 
-    // Покупка товара
     async function buyProduct(productId) {
       if (!user) {
-        tg.showAlert('Ошибка: не удалось получить данные пользователя');
+        tg.showAlert('ERROR: User data unavailable');
         return;
       }
 
       const button = event.target;
       button.disabled = true;
-      button.textContent = 'Создание платежа...';
+      button.textContent = '> PROCESSING...';
 
       try {
         const response = await fetch(`${API_URL}/create-invoice`, {
@@ -486,18 +578,17 @@
         if (result.success) {
           tg.openLink(result.pay_url);
         } else {
-          tg.showAlert('Ошибка создания платежа: ' + result.error);
+          tg.showAlert('ERROR: ' + result.error);
         }
       } catch (error) {
-        console.error('Ошибка:', error);
-        tg.showAlert('Ошибка создания платежа');
+        console.error('Error:', error);
+        tg.showAlert('ERROR: Payment creation failed');
       } finally {
         button.disabled = false;
-        button.textContent = button.textContent.replace('Создание платежа...', 'Купить');
+        button.textContent = button.textContent.replace('> PROCESSING...', '> PURCHASE');
       }
     }
 
-    // Загрузка покупок
     async function loadPurchases() {
       if (!user) return;
 
@@ -508,40 +599,39 @@
         const purchasesDiv = document.getElementById('purchases');
         
         if (purchases.length === 0) {
-          purchasesDiv.innerHTML = '<div class="empty">У вас пока нет покупок</div>';
+          purchasesDiv.innerHTML = '<div class="empty">NO PURCHASES FOUND</div>';
           return;
         }
 
         purchasesDiv.innerHTML = purchases.map(purchase => `
           <div class="purchase-card">
-            <div class="purchase-date">${new Date(purchase.created_at).toLocaleDateString('ru-RU', {
+            <div class="purchase-date">${new Date(purchase.created_at).toLocaleDateString('en-US', {
               year: 'numeric',
-              month: 'long',
+              month: 'short',
               day: 'numeric',
               hour: '2-digit',
               minute: '2-digit'
             })}</div>
             <div class="purchase-name">${purchase.name}</div>
             <div class="purchase-description">${purchase.description}</div>
-            <div class="purchase-status">✓ Оплачено ${purchase.amount}₽</div>
+            <div class="purchase-status">PAID ${purchase.amount}₽</div>
             ${purchase.file_url ? `
               <button class="download-button" onclick="downloadFile(${purchase.purchase_id})">
-                📥 Скачать индикатор
+                DOWNLOAD FILE
               </button>
             ` : ''}
           </div>
         `).join('');
       } catch (error) {
-        console.error('Ошибка загрузки покупок:', error);
+        console.error('Error loading purchases:', error);
         document.getElementById('purchases').innerHTML = 
-          '<div class="empty">Ошибка загрузки покупок</div>';
+          '<div class="empty">ERROR LOADING PURCHASES</div>';
       }
     }
 
-    // Функция скачивания файла
     function downloadFile(purchaseId) {
       if (!user) {
-        tg.showAlert('Ошибка: не удалось получить данные пользователя');
+        tg.showAlert('ERROR: User data unavailable');
         return;
       }
       
@@ -549,7 +639,6 @@
       window.open(downloadUrl, '_blank');
     }
 
-    // Загружаем товары при старте
     loadProducts();
   </script>
 </body>
