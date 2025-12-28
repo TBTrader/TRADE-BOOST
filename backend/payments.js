@@ -27,7 +27,7 @@ async function createInvoice(productId, telegramId) {
       body: JSON.stringify({
         amount: product.price,
         currency_type: 'fiat',
-        fiat: 'RUB',
+        fiat: 'USD',
         asset: 'USDT',
         description: product.name,
         paid_btn_name: 'callback',
