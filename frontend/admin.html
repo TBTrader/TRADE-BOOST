@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADMIN PANEL - TRADE BOOST</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'IBM Plex Mono', monospace;
+      background: #0d0d0d;
+      color: #00ff41;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      padding: 30px 0;
+      border-bottom: 2px solid rgba(0, 255, 65, 0.3);
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 36px;
+      font-family: 'VT323', monospace;
+      letter-spacing: 4px;
+      text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+    }
+
+    .header p {
+      font-size: 12px;
+      color: rgba(0, 255, 65, 0.6);
+      margin-top: 10px;
+      letter-spacing: 2px;
+    }
+
+    .actions {
+      margin-bottom: 30px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      background: rgba(0, 255, 65, 0.1);
+      color: #00ff41;
+      border: 2px solid #00ff41;
+      cursor: pointer;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: rgba(0, 255, 65, 0.2);
+      box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+    }
+
+    .btn-danger {
+      border-color: #ff4136;
+      color: #ff4136;
+      background: rgba(255, 65, 54, 0.1);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 65, 54, 0.2);
+      box-shadow: 0 0 15px rgba(255, 65, 54, 0.3);
+    }
+
+    .products-list {
+      display: grid;
+      gap: 20px;
+    }
+
+    .product-item {
+      background: rgba(20, 20, 20, 0.8);
+      border: 2px solid rgba(0, 255, 65, 0.3);
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s;
+    }
+
+    .product-item:hover {
+      border-color: #00ff41;
+    }
+
+    .product-info h3 {
+      font-size: 20px;
+      font-family: 'VT323', monospace;
+      margin-bottom: 8px;
+    }
+
+    .product-info p {
+      font-size: 13px;
+      color: rgba(0, 255, 65, 0.7);
+      margin-bottom: 8px;
+    }
+
+    .product-info .price {
+      font-size: 18px;
+      font-weight: 700;
+      color: #00ff41;
+    }
+
+    .product-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #0d0d0d;
+      border: 2px solid #00ff41;
+      padding: 30px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-content h2 {
+      font-size: 24px;
+      font-family: 'VT323', monospace;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      background: rgba(20, 20, 20, 0.8);
+      border: 1px solid rgba(0, 255, 65, 0.3);
+      color: #00ff41;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #00ff41;
+      box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .form-actions button {
+      flex: 1;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 18px;
+      color: rgba(0, 255, 65, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ADMIN PANEL</h1>
+      <p>TRADE BOOST MANAGEMENT SYSTEM</p>
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="openAddModal()">+ ADD NEW PRODUCT</button>
+    </div>
+
+    <div id="products-list" class="products-list">
+      <div class="loading">LOADING PRODUCTS...</div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div id="product-modal" class="modal">
+    <div class="modal-content">
+      <h2 id="modal-title">ADD PRODUCT</h2>
+      <form id="product-form" onsubmit="saveProduct(event)">
+        <input type="hidden" id="product-id">
+        
+        <div class="form-group">
+          <label>Product Name</label>
+          <input type="text" id="product-name" required>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="product-description" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Price (USD)</label>
+          <input type="number" id="product-price" min="0" step="1" required>
+        </div>
+
+        <div class="form-group">
+          <label>File (Pine Script)</label>
+          <input type="file" id="product-file" accept=".pine,.txt">
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-danger" onclick="closeModal()">CANCEL</button>
+          <button type="submit" class="btn">SAVE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://trade-boost.onrender.com/api';
+
+    async function loadProducts() {
+      try {
+        const response = await fetch(API_URL + '/products');
+        const products = await response.json();
+        
+        const listDiv = document.getElementById('products-list');
+        
+        if (products.length === 0) {
+          listDiv.innerHTML = '<div class="loading">NO PRODUCTS FOUND</div>';
+          return;
+        }
+
+        listDiv.innerHTML = products.map(product => 
+          '<div class="product-item">' +
+            '<div class="product-info">' +
+              '<h3>' + product.name + '</h3>' +
+              '<p>' + product.description + '</p>' +
+              '<div class="price">$' + product.price + '</div>' +
+            '</div>' +
+            '<div class="product-actions">' +
+              '<button class="btn" onclick="editProduct(' + product.id + ')">EDIT</button>' +
+              '<button class="btn btn-danger" onclick="deleteProduct(' + product.id + ')">DELETE</button>' +
+            '</div>' +
+          '</div>'
+        ).join('');
+      } catch (error) {
+        console.error('Error loading products:', error);
+        document.getElementById('products-list').innerHTML = 
+          '<div class="loading">ERROR LOADING PRODUCTS</div>';
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('modal-title').textContent = 'ADD PRODUCT';
+      document.getElementById('product-form').reset();
+      document.getElementById('product-id').value = '';
+      document.getElementById('product-modal').classList.add('active');
+    }
+
+    async function editProduct(id) {
+      try {
+        const response = await fetch(API_URL + '/products');
+        const products = await response.json();
+        const product = products.find(p => p.id === id);
+        
+        if (!product) return;
+
+        document.getElementById('modal-title').textContent = 'EDIT PRODUCT';
+        document.getElementById('product-id').value = product.id;
+        document.getElementById('product-name').value = product.name;
+        document.getElementById('product-description').value = product.description;
+        document.getElementById('product-price').value = product.price;
+        document.getElementById('product-modal').classList.add('active');
+      } catch (error) {
+        console.error('Error loading product:', error);
+        alert('ERROR: Could not load product');
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('product-modal').classList.remove('active');
+    }
+
+    async function saveProduct(event) {
+      event.preventDefault();
+      
+      const id = document.getElementById('product-id').value;
+      const name = document.getElementById('product-name').value;
+      const description = document.getElementById('product-description').value;
+      const price = document.getElementById('product-price').value;
+      
+      const data = { name, description, price: parseInt(price) };
+      
+      try {
+        const endpoint = id ? '/admin/products/' + id : '/admin/products';
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(API_URL + endpoint, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          closeModal();
+          loadProducts();
+          alert('Product saved successfully!');
+        } else {
+          alert('ERROR: Could not save product');
+        }
+      } catch (error) {
+        console.error('Error saving product:', error);
+        alert('ERROR: Could not save product');
+      }
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('Are you sure you want to delete this product?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(API_URL + '/admin/products/' + id, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          loadProducts();
+          alert('Product deleted successfully!');
+        } else {
+          alert('ERROR: Could not delete product');
+        }
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        alert('ERROR: Could not delete product');
+      }
+    }
+
+    loadProducts();
+  </script>
+</body>
+</html>

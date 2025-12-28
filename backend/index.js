@@ -161,6 +161,65 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   bot.launch();
 }
+// ===== ADMIN ENDPOINTS =====
+
+// Add new product
+app.post('/api/admin/products', (req, res) => {
+  try {
+    const { name, description, price } = req.body;
+    
+    const stmt = db.prepare(`
+      INSERT INTO products (name, description, price)
+      VALUES (?, ?, ?)
+    `);
+    
+    const result = stmt.run(name, description, price);
+    
+    res.json({ 
+      success: true, 
+      id: result.lastInsertRowid 
+    });
+  } catch (error) {
+    console.error('Error adding product:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update product
+app.put('/api/admin/products/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, price } = req.body;
+    
+    const stmt = db.prepare(`
+      UPDATE products 
+      SET name = ?, description = ?, price = ?
+      WHERE id = ?
+    `);
+    
+    stmt.run(name, description, price, id);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete product
+app.delete('/api/admin/products/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const stmt = db.prepare('DELETE FROM products WHERE id = ?');
+    stmt.run(id);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Start server
 const PORT = process.env.PORT || 3000;
