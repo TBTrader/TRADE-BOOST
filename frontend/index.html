@@ -486,7 +486,7 @@
   <div class="container">
     <div class="header">
       <div class="terminal-line">&gt; SYSTEM ONLINE_</div>
-      <div class="logo">⚡</div>
+      <div class="logo">TB</div>
       <h1>TRADE BOOST</h1>
       <p>AI TRADING INDICATORS<span class="blinking-cursor">_</span></p>
     </div>
@@ -535,12 +535,12 @@
           <div class="product-card">
             <div class="product-header">
               <div class="product-title">${product.name}</div>
-              <div class="product-price">${product.price}₽</div>
+              <div class="product-price">$${product.price}</div>
             </div>
             <div class="product-description">${product.description}</div>
             <div class="product-badge">TradingView Compatible</div>
             <button class="buy-button" onclick="buyProduct(${product.id})">
-              Purchase ${product.price}₽
+              Purchase $${product.price}
             </button>
           </div>
         `).join('');
@@ -614,7 +614,7 @@
             })}</div>
             <div class="purchase-name">${purchase.name}</div>
             <div class="purchase-description">${purchase.description}</div>
-            <div class="purchase-status">PAID ${purchase.amount}₽</div>
+            <div class="purchase-status">PAID $${purchase.amount}</div>
             ${purchase.file_url ? `
               <button class="download-button" onclick="downloadFile(${purchase.purchase_id})">
                 DOWNLOAD FILE
