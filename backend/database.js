@@ -36,7 +36,7 @@ console.log('✅ База данных инициализирована');
 
 // Добавляем тестовые товары
 const insertProduct = db.prepare(`
-  INSERT OR IGNORE INTO products (id, name, description, price, file_url)
+  REPLACE INTO products (id, name, description, price, file_url)
   VALUES (?, ?, ?, ?, ?)
 `);
 
