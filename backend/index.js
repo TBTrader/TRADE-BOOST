@@ -2,7 +2,35 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const db = require('./database');
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, 'files');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueName = Date.now() + '-' + file.originalname;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    if (ext !== '.pine' && ext !== '.txt') {
+      return cb(new Error('Only .pine and .txt files are allowed'));
+    }
+    cb(null, true);
+  }
+});
 const payments = require('./payments');
 
 // Инициализация бота
@@ -217,6 +245,29 @@ app.delete('/api/admin/products/:id', (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting product:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+// Upload file for product
+app.post('/api/admin/products/:id/upload', upload.single('file'), (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    
+    const fileUrl = 'files/' + req.file.filename;
+    
+    const stmt = db.prepare('UPDATE products SET file_url = ? WHERE id = ?');
+    stmt.run(fileUrl, id);
+    
+    res.json({ 
+      success: true, 
+      file_url: fileUrl 
+    });
+  } catch (error) {
+    console.error('Error uploading file:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
