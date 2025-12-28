@@ -40,10 +40,29 @@ const insertProduct = db.prepare(`
   VALUES (?, ?, ?, ?, ?)
 `);
 
-insertProduct.run(1, 'RSI Pro', 'Продвинутый индикатор RSI с дополнительными уровнями и сигналами', 500, 'files/rsi_pro.pine');
-insertProduct.run(2, 'MACD Advanced', 'Улучшенный MACD с настраиваемыми параметрами', 700, 'files/macd_advanced.pine');
-insertProduct.run(3, 'Volume Profile', 'Профессиональный инструмент для анализа объёмов', 1000, 'files/volume_profile.pine');
+insertProduct.run(
+  1,
+  'RSI Pro',
+  'Advanced RSI indicator with additional levels and signals',
+  500,
+  'files/rsi_pro.pine'
+);
 
+insertProduct.run(
+  2,
+  'MACD Advanced',
+  'Enhanced MACD with customizable parameters',
+  700,
+  'files/macd_advanced.pine'
+);
+
+insertProduct.run(
+  3,
+  'Volume Profile',
+  'Professional tool for volume analysis',
+  1000,
+  'files/volume_profile.pine'
+);
 console.log('✅ Тестовые товары добавлены');
 
 module.exports = db;
