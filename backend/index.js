@@ -302,12 +302,16 @@ app.post('/api/admin/products', (req, res) => {
   try {
     const { name, description, price } = req.body;
     
+    console.log('Creating product:', { name, description, price });
+    
     const stmt = db.prepare(`
-      INSERT INTO products (name, description, price)
-      VALUES (?, ?, ?)
+      INSERT INTO products (name, description, price, file_url)
+      VALUES (?, ?, ?, NULL)
     `);
     
     const result = stmt.run(name, description, price);
+    
+    console.log('Product created with ID:', result.lastInsertRowid);
     
     res.json({ 
       success: true, 
@@ -325,13 +329,17 @@ app.put('/api/admin/products/:id', (req, res) => {
     const { id } = req.params;
     const { name, description, price } = req.body;
     
+    console.log('Updating product:', { id, name, description, price });
+    
     const stmt = db.prepare(`
       UPDATE products 
       SET name = ?, description = ?, price = ?
       WHERE id = ?
     `);
     
-    stmt.run(name, description, price, id);
+    const result = stmt.run(name, description, price, id);
+    
+    console.log('Product updated, changes:', result.changes);
     
     res.json({ success: true });
   } catch (error) {
