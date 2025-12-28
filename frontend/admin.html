@@ -262,6 +262,10 @@
   </div>
 
   <script>
+    // Check authentication
+if (sessionStorage.getItem('admin_authenticated') !== 'true') {
+  window.location.href = 'admin-login.html';
+}
     const API_URL = 'https://trade-boost.onrender.com/api';
 
     async function loadProducts() {
