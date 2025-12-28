@@ -1,0 +1,72 @@
+//@version=5
+indicator("Volume Profile - Trade Boost", overlay=true)
+
+// Параметры
+lookback = input.int(100, "Lookback Period", minval=10)
+rows = input.int(24, "Number of Rows", minval=5, maxval=50)
+showPOC = input.bool(true, "Show Point of Control")
+showVAH = input.bool(true, "Show Value Area High")
+showVAL = input.bool(true, "Show Value Area Low")
+
+// Расчёт диапазона цен
+highestPrice = ta.highest(high, lookback)
+lowestPrice = ta.lowest(low, lookback)
+priceRange = highestPrice - lowestPrice
+rowHeight = priceRange / rows
+
+// Массив для хранения объёмов
+var float[] volumeProfile = array.new_float(rows, 0)
+
+// Заполнение профиля объёма
+if barstate.islast
+    array.fill(volumeProfile, 0)
+    for i = 0 to lookback - 1
+        priceLevel = math.floor((close[i] - lowestPrice) / rowHeight)
+        if priceLevel >= 0 and priceLevel < rows
+            currentVol = array.get(volumeProfile, int(priceLevel))
+            array.set(volumeProfile, int(priceLevel), currentVol + volume[i])
+
+// Поиск максимального объёма (POC)
+var float pocPrice = na
+var float maxVolume = 0
+var int pocIndex = 0
+
+if barstate.islast
+    maxVolume := array.max(volumeProfile)
+    pocIndex := array.indexof(volumeProfile, maxVolume)
+    pocPrice := lowestPrice + (pocIndex + 0.5) * rowHeight
+
+// Расчёт Value Area (70% объёма)
+var float vahPrice = na
+var float valPrice = na
+
+if barstate.islast
+    totalVolume = array.sum(volumeProfile)
+    targetVolume = totalVolume * 0.70
+    
+    cumulativeVolume = array.get(volumeProfile, pocIndex)
+    upperIndex = pocIndex
+    lowerIndex = pocIndex
+    
+    while cumulativeVolume < targetVolume and (upperIndex < rows - 1 or lowerIndex > 0)
+        upperVol = upperIndex < rows - 1 ? array.get(volumeProfile, upperIndex + 1) : 0
+        lowerVol = lowerIndex > 0 ? array.get(volumeProfile, lowerIndex - 1) : 0
+        
+        if upperVol > lowerVol
+            upperIndex := upperIndex + 1
+            cumulativeVolume := cumulativeVolume + upperVol
+        else
+            lowerIndex := lowerIndex - 1
+            cumulativeVolume := cumulativeVolume + lowerVol
+    
+    vahPrice := lowestPrice + (upperIndex + 1) * rowHeight
+    valPrice := lowestPrice + lowerIndex * rowHeight
+
+// Отображение
+plot(showPOC and not na(pocPrice) ? pocPrice : na, "POC", color=color.yellow, linewidth=2, style=plot.style_line)
+plot(showVAH and not na(vahPrice) ? vahPrice : na, "VAH", color=color.green, linewidth=1, style=plot.style_line)
+plot(showVAL and not na(valPrice) ? valPrice : na, "VAL", color=color.red, linewidth=1, style=plot.style_line)
+
+// Заливка Value Area
+fillColor = color.new(color.blue, 95)
+fill(plot(showVAH ? vahPrice : na), plot(showVAL ? valPrice : na), fillColor, title="Value Area")
