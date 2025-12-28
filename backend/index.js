@@ -191,6 +191,95 @@ if (process.env.NODE_ENV === 'production') {
 }
 // ===== ADMIN ENDPOINTS =====
 
+// Get sales statistics
+app.get('/api/admin/stats', (req, res) => {
+  try {
+    const stats = db.prepare(`
+      SELECT 
+        COUNT(*) as total_purchases,
+        SUM(amount) as total_revenue,
+        COUNT(DISTINCT user_id) as total_customers
+      FROM purchases
+      WHERE status = 'paid'
+    `).get();
+    
+    const recentPurchases = db.prepare(`
+      SELECT 
+        p.id,
+        p.amount,
+        p.created_at,
+        pr.name as product_name,
+        u.username,
+        u.first_name
+      FROM purchases p
+      JOIN products pr ON p.product_id = pr.id
+      JOIN users u ON p.user_id = u.id
+      WHERE p.status = 'paid'
+      ORDER BY p.created_at DESC
+      LIMIT 10
+    `).all();
+    
+    res.json({
+      stats,
+      recent_purchases: recentPurchases
+    });
+  } catch (error) {
+    console.error('Error getting stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all purchases
+app.get('/api/admin/purchases', (req, res) => {
+  try {
+    const purchases = db.prepare(`
+      SELECT 
+        p.id,
+        p.amount,
+        p.status,
+        p.created_at,
+        pr.name as product_name,
+        u.telegram_id,
+        u.username,
+        u.first_name
+      FROM purchases p
+      JOIN products pr ON p.product_id = pr.id
+      JOIN users u ON p.user_id = u.id
+      ORDER BY p.created_at DESC
+    `).all();
+    
+    res.json(purchases);
+  } catch (error) {
+    console.error('Error getting purchases:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all users
+app.get('/api/admin/users', (req, res) => {
+  try {
+    const users = db.prepare(`
+      SELECT 
+        u.id,
+        u.telegram_id,
+        u.username,
+        u.first_name,
+        u.created_at,
+        COUNT(p.id) as purchases_count,
+        COALESCE(SUM(p.amount), 0) as total_spent
+      FROM users u
+      LEFT JOIN purchases p ON u.id = p.user_id AND p.status = 'paid'
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+    `).all();
+    
+    res.json(users);
+  } catch (error) {
+    console.error('Error getting users:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Add new product
 app.post('/api/admin/products', (req, res) => {
   try {

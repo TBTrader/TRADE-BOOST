@@ -208,6 +208,29 @@
       font-size: 18px;
       color: rgba(0, 255, 65, 0.6);
     }
+    .tab.active {
+  background: rgba(0, 255, 65, 0.15) !important;
+  color: #00ff41 !important;
+}
+
+.tab:hover {
+  background: rgba(0, 255, 65, 0.05) !important;
+}
+
+.purchase-row, .user-row {
+  background: rgba(20, 20, 20, 0.8);
+  border: 2px solid rgba(0, 255, 65, 0.3);
+  padding: 15px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 15px;
+  font-size: 13px;
+}
+
+.purchase-row:hover, .user-row:hover {
+  border-color: #00ff41;
+}
   </style>
 </head>
 <body>
@@ -217,49 +240,54 @@
       <p>TRADE BOOST MANAGEMENT SYSTEM</p>
     </div>
 
-    <div class="actions">
-      <button class="btn" onclick="openAddModal()">+ ADD NEW PRODUCT</button>
+    <div class="tabs" style="display: flex; gap: 0; margin-bottom: 30px; background: rgba(20, 20, 20, 0.8); border: 2px solid rgba(0, 255, 65, 0.3); overflow: hidden;">
+      <button class="tab active" onclick="showSection('products')" style="flex: 1; padding: 16px; background: rgba(0, 255, 65, 0.15); border: none; border-right: 2px solid rgba(0, 255, 65, 0.3); color: #00ff41; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Mono', monospace; letter-spacing: 2px; text-transform: uppercase;">PRODUCTS</button>
+      <button class="tab" onclick="showSection('stats')" style="flex: 1; padding: 16px; background: transparent; border: none; border-right: 2px solid rgba(0, 255, 65, 0.3); color: rgba(0, 255, 65, 0.5); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Mono', monospace; letter-spacing: 2px; text-transform: uppercase;">STATISTICS</button>
+      <button class="tab" onclick="showSection('purchases')" style="flex: 1; padding: 16px; background: transparent; border: none; border-right: 2px solid rgba(0, 255, 65, 0.3); color: rgba(0, 255, 65, 0.5); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Mono', monospace; letter-spacing: 2px; text-transform: uppercase;">PURCHASES</button>
+      <button class="tab" onclick="showSection('users')" style="flex: 1; padding: 16px; background: transparent; border: none; color: rgba(0, 255, 65, 0.5); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Mono', monospace; letter-spacing: 2px; text-transform: uppercase;">USERS</button>
     </div>
-
-    <div id="products-list" class="products-list">
-      <div class="loading">LOADING PRODUCTS...</div>
+    
+    <!-- Products Section -->
+    <div id="products-section">
+      <div class="actions">
+        <button class="btn" onclick="openAddModal()">+ ADD NEW PRODUCT</button>
+      </div>
+      <div id="products-list" class="products-list">
+        <div class="loading">LOADING PRODUCTS...</div>
+      </div>
     </div>
-  </div>
-
-  <!-- Add/Edit Modal -->
-  <div id="product-modal" class="modal">
-    <div class="modal-content">
-      <h2 id="modal-title">ADD PRODUCT</h2>
-      <form id="product-form" onsubmit="saveProduct(event)">
-        <input type="hidden" id="product-id">
-        
-        <div class="form-group">
-          <label>Product Name</label>
-          <input type="text" id="product-name" required>
+    
+    <!-- Statistics Section -->
+    <div id="stats-section" style="display: none;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <div style="background: rgba(20, 20, 20, 0.8); border: 2px solid rgba(0, 255, 65, 0.3); padding: 20px;">
+          <div style="font-size: 12px; color: rgba(0, 255, 65, 0.6); margin-bottom: 10px; letter-spacing: 1px;">TOTAL REVENUE</div>
+          <div id="total-revenue" style="font-size: 32px; font-family: 'VT323', monospace; color: #00ff41;">$0</div>
         </div>
-
-        <div class="form-group">
-          <label>Description</label>
-          <textarea id="product-description" required></textarea>
+        <div style="background: rgba(20, 20, 20, 0.8); border: 2px solid rgba(0, 255, 65, 0.3); padding: 20px;">
+          <div style="font-size: 12px; color: rgba(0, 255, 65, 0.6); margin-bottom: 10px; letter-spacing: 1px;">TOTAL PURCHASES</div>
+          <div id="total-purchases" style="font-size: 32px; font-family: 'VT323', monospace; color: #00ff41;">0</div>
         </div>
-
-        <div class="form-group">
-          <label>Price (USD)</label>
-          <input type="number" id="product-price" min="0" step="1" required>
+        <div style="background: rgba(20, 20, 20, 0.8); border: 2px solid rgba(0, 255, 65, 0.3); padding: 20px;">
+          <div style="font-size: 12px; color: rgba(0, 255, 65, 0.6); margin-bottom: 10px; letter-spacing: 1px;">TOTAL CUSTOMERS</div>
+          <div id="total-customers" style="font-size: 32px; font-family: 'VT323', monospace; color: #00ff41;">0</div>
         </div>
-
-        <div class="form-group">
-          <label>File (Pine Script)</label>
-          <input type="file" id="product-file" accept=".pine,.txt">
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-danger" onclick="closeModal()">CANCEL</button>
-          <button type="submit" class="btn">SAVE</button>
-        </div>
-      </form>
+      </div>
+      <h3 style="margin-bottom: 20px; font-family: 'VT323', monospace; font-size: 24px;">RECENT PURCHASES</h3>
+      <div id="recent-purchases"></div>
     </div>
-  </div>
+    
+    <!-- All Purchases Section -->
+    <div id="purchases-section" style="display: none;">
+      <h3 style="margin-bottom: 20px; font-family: 'VT323', monospace; font-size: 24px;">ALL PURCHASES</h3>
+      <div id="all-purchases"></div>
+    </div>
+    
+    <!-- Users Section -->
+    <div id="users-section" style="display: none;">
+      <h3 style="margin-bottom: 20px; font-family: 'VT323', monospace; font-size: 24px;">ALL USERS</h3>
+      <div id="users-list"></div>
+    </div>
 
   <script>
     // Check authentication
@@ -406,7 +434,101 @@ if (sessionStorage.getItem('admin_authenticated') !== 'true') {
         alert('ERROR: Could not delete product');
       }
     }
+    function showSection(section) {
+  // Update tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.remove('active');
+    tab.style.background = 'transparent';
+    tab.style.color = 'rgba(0, 255, 65, 0.5)';
+  });
+  event.target.classList.add('active');
+  event.target.style.background = 'rgba(0, 255, 65, 0.15)';
+  event.target.style.color = '#00ff41';
+  
+  // Update sections
+  document.getElementById('products-section').style.display = section === 'products' ? 'block' : 'none';
+  document.getElementById('stats-section').style.display = section === 'stats' ? 'block' : 'none';
+  document.getElementById('purchases-section').style.display = section === 'purchases' ? 'block' : 'none';
+  document.getElementById('users-section').style.display = section === 'users' ? 'block' : 'none';
+  
+  // Load data
+  if (section === 'stats') loadStats();
+  if (section === 'purchases') loadAllPurchases();
+  if (section === 'users') loadUsers();
+}
 
+async function loadStats() {
+  try {
+    const response = await fetch(API_URL + '/admin/stats');
+    const data = await response.json();
+    
+    document.getElementById('total-revenue').textContent = '$' + (data.stats.total_revenue || 0);
+    document.getElementById('total-purchases').textContent = data.stats.total_purchases || 0;
+    document.getElementById('total-customers').textContent = data.stats.total_customers || 0;
+    
+    const recentDiv = document.getElementById('recent-purchases');
+    if (data.recent_purchases.length === 0) {
+      recentDiv.innerHTML = '<div class="loading">NO PURCHASES YET</div>';
+      return;
+    }
+    
+    recentDiv.innerHTML = data.recent_purchases.map(p => 
+      '<div class="purchase-row">' +
+        '<div><strong>' + p.product_name + '</strong></div>' +
+        '<div>' + (p.username || p.first_name) + '</div>' +
+        '<div>$' + p.amount + ' - ' + new Date(p.created_at).toLocaleDateString() + '</div>' +
+      '</div>'
+    ).join('');
+  } catch (error) {
+    console.error('Error loading stats:', error);
+  }
+}
+
+async function loadAllPurchases() {
+  try {
+    const response = await fetch(API_URL + '/admin/purchases');
+    const purchases = await response.json();
+    
+    const purchasesDiv = document.getElementById('all-purchases');
+    if (purchases.length === 0) {
+      purchasesDiv.innerHTML = '<div class="loading">NO PURCHASES YET</div>';
+      return;
+    }
+    
+    purchasesDiv.innerHTML = purchases.map(p => 
+      '<div class="purchase-row">' +
+        '<div><strong>' + p.product_name + '</strong></div>' +
+        '<div>' + (p.username || p.first_name) + '</div>' +
+        '<div>$' + p.amount + ' - ' + p.status.toUpperCase() + '</div>' +
+      '</div>'
+    ).join('');
+  } catch (error) {
+    console.error('Error loading purchases:', error);
+  }
+}
+
+async function loadUsers() {
+  try {
+    const response = await fetch(API_URL + '/admin/users');
+    const users = await response.json();
+    
+    const usersDiv = document.getElementById('users-list');
+    if (users.length === 0) {
+      usersDiv.innerHTML = '<div class="loading">NO USERS YET</div>';
+      return;
+    }
+    
+    usersDiv.innerHTML = users.map(u => 
+      '<div class="user-row">' +
+        '<div><strong>' + (u.username || u.first_name) + '</strong><br>ID: ' + u.telegram_id + '</div>' +
+        '<div>Purchases: ' + u.purchases_count + '</div>' +
+        '<div>Total Spent: $' + u.total_spent + '</div>' +
+      '</div>'
+    ).join('');
+  } catch (error) {
+    console.error('Error loading users:', error);
+  }
+}
     loadProducts();
   </script>
 </body>
