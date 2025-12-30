@@ -336,24 +336,27 @@ if (sessionStorage.getItem('admin_authenticated') !== 'true') {
     }
 
     async function editProduct(id) {
-      try {
-        const response = await fetch(API_URL + '/products');
-        const products = await response.json();
-        const product = products.find(p => p.id === id);
-        
-        if (!product) return;
-
-        document.getElementById('modal-title').textContent = 'EDIT PRODUCT';
-        document.getElementById('product-id').value = product.id;
-        document.getElementById('product-name').value = product.name;
-        document.getElementById('product-description').value = product.description;
-        document.getElementById('product-price').value = product.price;
-        document.getElementById('product-modal').classList.add('active');
-      } catch (error) {
-        console.error('Error loading product:', error);
-        alert('ERROR: Could not load product');
-      }
+  try {
+    const response = await fetch(API_URL + '/products');
+    const products = await response.json();
+    const product = products.find(p => p.id === id);
+    
+    if (!product) {
+      alert('ERROR: Product not found');
+      return;
     }
+
+    document.getElementById('modal-title').textContent = 'EDIT PRODUCT';
+    document.getElementById('product-id').value = product.id;
+    document.getElementById('product-name').value = product.name;
+    document.getElementById('product-description').value = product.description;
+    document.getElementById('product-price').value = product.price;
+    document.getElementById('product-modal').classList.add('active');
+  } catch (error) {
+    console.error('Error loading product:', error);
+    alert('ERROR: Could not load product - ' + error.message);
+  }
+}
 
     function closeModal() {
       document.getElementById('product-modal').classList.remove('active');
@@ -362,31 +365,49 @@ if (sessionStorage.getItem('admin_authenticated') !== 'true') {
     async function saveProduct(event) {
   event.preventDefault();
   
+  const submitButton = event.target.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = 'SAVING...';
+  
   const id = document.getElementById('product-id').value;
   const name = document.getElementById('product-name').value;
   const description = document.getElementById('product-description').value;
   const price = document.getElementById('product-price').value;
   const fileInput = document.getElementById('product-file');
   
-  const data = { name, description, price: parseInt(price) };
+  const data = { 
+    name: name, 
+    description: description, 
+    price: parseInt(price) 
+  };
+  
+  console.log('Saving product:', data);
   
   try {
     // Save product data
     const endpoint = id ? '/admin/products/' + id : '/admin/products';
     const method = id ? 'PUT' : 'POST';
     
+    console.log('Request:', method, API_URL + endpoint);
+    
     const response = await fetch(API_URL + endpoint, {
       method: method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(data)
     });
     
-    const result = await response.json();
+    console.log('Response status:', response.status);
     
     if (!response.ok) {
-      alert('ERROR: Could not save product');
-      return;
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      throw new Error('Server returned ' + response.status);
     }
+    
+    const result = await response.json();
+    console.log('Result:', result);
     
     // Upload file if selected
     if (fileInput.files.length > 0) {
@@ -394,13 +415,18 @@ if (sessionStorage.getItem('admin_authenticated') !== 'true') {
       const formData = new FormData();
       formData.append('file', fileInput.files[0]);
       
+      console.log('Uploading file for product:', productId);
+      
       const uploadResponse = await fetch(API_URL + '/admin/products/' + productId + '/upload', {
         method: 'POST',
         body: formData
       });
       
       if (!uploadResponse.ok) {
+        console.warn('File upload failed');
         alert('Product saved but file upload failed');
+      } else {
+        console.log('File uploaded successfully');
       }
     }
     
@@ -409,7 +435,10 @@ if (sessionStorage.getItem('admin_authenticated') !== 'true') {
     alert('Product saved successfully!');
   } catch (error) {
     console.error('Error saving product:', error);
-    alert('ERROR: Could not save product');
+    alert('ERROR: Could not save product - ' + error.message);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = 'SAVE';
   }
 }
 
