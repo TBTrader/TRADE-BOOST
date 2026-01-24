@@ -393,7 +393,10 @@
       window.location.href = 'admin-login.html';
     }
 
-    const API_URL = 'https://trade-boost.onrender.com/api';
+    // Auto-detect API URL based on environment
+    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000/api'
+      : 'https://trade-boost.onrender.com/api';
     const ADMIN_TOKEN = sessionStorage.getItem('admin_token') || 'tradeboost2025';
 
     function getHeaders(contentType = null) {
