@@ -554,7 +554,12 @@
         const result = await response.json();
 
         if (result.success) {
-          tg.openLink(result.pay_url);
+          // CryptoBot link is a Telegram link (t.me/...)
+          if (result.pay_url.includes('t.me')) {
+            tg.openTelegramLink(result.pay_url);
+          } else {
+            tg.openLink(result.pay_url);
+          }
         } else {
           tg.showAlert('ERROR: ' + result.error);
         }
