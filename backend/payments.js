@@ -71,11 +71,13 @@ function handlePaymentUpdate(update) {
       const payload = JSON.parse(update.payload);
       
       const stmt = db.prepare(`
-        UPDATE purchases 
-        SET status = 'paid' 
-        WHERE user_id = ? AND product_id = ? AND status = 'pending'
-        ORDER BY created_at DESC
-        LIMIT 1
+        UPDATE purchases
+        SET status = 'paid'
+        WHERE id = (
+          SELECT id FROM purchases
+          WHERE user_id = ? AND product_id = ? AND status = 'pending'
+          ORDER BY created_at DESC LIMIT 1
+        )
       `);
       stmt.run(payload.user_id, payload.product_id);
 

@@ -394,6 +394,13 @@
     }
 
     const API_URL = 'https://trade-boost.onrender.com/api';
+    const ADMIN_TOKEN = sessionStorage.getItem('admin_token') || 'tradeboost2025';
+
+    function getHeaders(contentType = null) {
+      const headers = { 'X-Admin-Token': ADMIN_TOKEN };
+      if (contentType) headers['Content-Type'] = contentType;
+      return headers;
+    }
 
     async function loadProducts() {
       try {
@@ -490,9 +497,7 @@
 
         const response = await fetch(API_URL + endpoint, {
           method: method,
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: getHeaders('application/json'),
           body: JSON.stringify(data)
         });
 
@@ -516,6 +521,7 @@
 
           const uploadResponse = await fetch(API_URL + '/admin/products/' + productId + '/upload', {
             method: 'POST',
+            headers: { 'X-Admin-Token': ADMIN_TOKEN },
             body: formData
           });
 
@@ -546,7 +552,8 @@
 
       try {
         const response = await fetch(API_URL + '/admin/products/' + id, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: getHeaders()
         });
 
         if (response.ok) {
@@ -579,7 +586,7 @@
 
     async function loadStats() {
       try {
-        const response = await fetch(API_URL + '/admin/stats');
+        const response = await fetch(API_URL + '/admin/stats', { headers: getHeaders() });
         const data = await response.json();
 
         document.getElementById('total-revenue').textContent = '$' + (data.stats.total_revenue || 0);
@@ -606,7 +613,7 @@
 
     async function loadAllPurchases() {
       try {
-        const response = await fetch(API_URL + '/admin/purchases');
+        const response = await fetch(API_URL + '/admin/purchases', { headers: getHeaders() });
         const purchases = await response.json();
 
         const purchasesDiv = document.getElementById('all-purchases');
@@ -629,7 +636,7 @@
 
     async function loadUsers() {
       try {
-        const response = await fetch(API_URL + '/admin/users');
+        const response = await fetch(API_URL + '/admin/users', { headers: getHeaders() });
         const users = await response.json();
 
         const usersDiv = document.getElementById('users-list');

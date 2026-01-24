@@ -5,6 +5,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const db = require('./database');
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
@@ -144,17 +145,35 @@ app.post('/api/create-invoice', async (req, res) => {
   }
 });
 
+// Verify CryptoBot webhook signature
+function verifyCryptoBotSignature(body, signature) {
+  const secret = crypto.createHash('sha256').update(process.env.CRYPTO_BOT_TOKEN).digest();
+  const checkString = JSON.stringify(body);
+  const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
+  return hmac === signature;
+}
+
 // Webhook CryptoBot
 app.post('/api/crypto-webhook', async (req, res) => {
   try {
+    // Verify signature
+    const signature = req.headers['crypto-pay-api-signature'];
+    if (!verifyCryptoBotSignature(req.body, signature)) {
+      console.warn('Invalid webhook signature');
+      return res.status(401).json({ ok: false, error: 'Invalid signature' });
+    }
+
     if (req.body.update_type === 'invoice_paid') {
       const invoice = req.body.payload;
       const payload = JSON.parse(invoice.payload);
 
       db.prepare(
         `UPDATE purchases SET status = 'paid'
-         WHERE user_id = ? AND product_id = ? AND status = 'pending'
-         ORDER BY created_at DESC LIMIT 1`
+         WHERE id = (
+           SELECT id FROM purchases
+           WHERE user_id = ? AND product_id = ? AND status = 'pending'
+           ORDER BY created_at DESC LIMIT 1
+         )`
       ).run(payload.user_id, payload.product_id);
 
       const product = db
@@ -191,8 +210,19 @@ if (process.env.NODE_ENV === 'production') {
 }
 // ===== ADMIN ENDPOINTS =====
 
+// Admin authentication middleware
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'tradeboost2025';
+
+function adminAuth(req, res, next) {
+  const token = req.headers['x-admin-token'];
+  if (token !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
 // Get sales statistics
-app.get('/api/admin/stats', (req, res) => {
+app.get('/api/admin/stats', adminAuth, (req, res) => {
   try {
     const stats = db.prepare(`
       SELECT 
@@ -230,7 +260,7 @@ app.get('/api/admin/stats', (req, res) => {
 });
 
 // Get all purchases
-app.get('/api/admin/purchases', (req, res) => {
+app.get('/api/admin/purchases', adminAuth, (req, res) => {
   try {
     const purchases = db.prepare(`
       SELECT 
@@ -256,7 +286,7 @@ app.get('/api/admin/purchases', (req, res) => {
 });
 
 // Get all users
-app.get('/api/admin/users', (req, res) => {
+app.get('/api/admin/users', adminAuth, (req, res) => {
   try {
     const users = db.prepare(`
       SELECT 
@@ -280,7 +310,7 @@ app.get('/api/admin/users', (req, res) => {
   }
 });
 // Get user statistics
-app.get('/api/admin/user-stats', (req, res) => {
+app.get('/api/admin/user-stats', adminAuth, (req, res) => {
   try {
     const stats = db.prepare(`
       SELECT 
@@ -298,7 +328,7 @@ app.get('/api/admin/user-stats', (req, res) => {
 });
 
 // Add new product
-app.post('/api/admin/products', (req, res) => {
+app.post('/api/admin/products', adminAuth, (req, res) => {
   try {
     const { name, description, price } = req.body;
     
@@ -324,7 +354,7 @@ app.post('/api/admin/products', (req, res) => {
 });
 
 // Update product
-app.put('/api/admin/products/:id', (req, res) => {
+app.put('/api/admin/products/:id', adminAuth, (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, price } = req.body;
@@ -349,7 +379,7 @@ app.put('/api/admin/products/:id', (req, res) => {
 });
 
 // Delete product
-app.delete('/api/admin/products/:id', (req, res) => {
+app.delete('/api/admin/products/:id', adminAuth, (req, res) => {
   try {
     const { id } = req.params;
     
@@ -363,7 +393,7 @@ app.delete('/api/admin/products/:id', (req, res) => {
   }
 });
 // Upload file for product
-app.post('/api/admin/products/:id/upload', upload.single('file'), (req, res) => {
+app.post('/api/admin/products/:id/upload', adminAuth, upload.single('file'), (req, res) => {
   try {
     const { id } = req.params;
     
