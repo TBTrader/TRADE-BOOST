@@ -5,7 +5,7 @@ const CRYPTO_BOT_API = 'https://pay.crypt.bot/api';
 const CRYPTO_BOT_TOKEN = process.env.CRYPTO_BOT_TOKEN;
 
 // Создание инвойса для оплаты
-async function createInvoice(productId, telegramId) {
+async function createInvoice(productId, telegramId, tradingviewUsername) {
   try {
     const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
     if (!product) {
@@ -16,6 +16,15 @@ async function createInvoice(productId, telegramId) {
     if (!user) {
       throw new Error('Пользователь не найден');
     }
+
+    // Формируем описание с периодом подписки
+    const durationDays = product.duration_days || 30;
+    let durationText = `${durationDays} дней`;
+    if (durationDays === 30) durationText = '1 месяц';
+    if (durationDays === 90) durationText = '3 месяца';
+    if (durationDays === 365) durationText = '1 год';
+
+    const description = `${product.name} (${durationText}) для @${tradingviewUsername}`;
 
     // Создаём инвойс через прямой HTTP запрос
     const response = await fetch(`${CRYPTO_BOT_API}/createInvoice`, {
@@ -29,13 +38,14 @@ async function createInvoice(productId, telegramId) {
         currency_type: 'fiat',
         fiat: 'USD',
         asset: 'USDT',
-        description: product.name,
+        description: description,
         paid_btn_name: 'callback',
-paid_btn_url: 'https://tbtrader.github.io/TRADE-BOOST/',
+        paid_btn_url: 'https://tbtrader.github.io/TRADE-BOOST/',
         payload: JSON.stringify({
           product_id: productId,
           user_id: user.id,
-          telegram_id: telegramId
+          telegram_id: telegramId,
+          tradingview_username: tradingviewUsername
         })
       })
     });

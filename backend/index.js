@@ -37,10 +37,131 @@ const payments = require('./payments');
 // Инициализация бота
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+// ID администратора для уведомлений (твой Telegram ID)
+const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
+
 // Инициализация Express сервера
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ===== ФУНКЦИИ ПОДПИСОК =====
+
+// Создание подписки после оплаты
+function createSubscription(userId, productId, purchaseId, tradingviewUsername) {
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+  const durationDays = product.duration_days || 30;
+
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + durationDays);
+
+  const stmt = db.prepare(`
+    INSERT INTO subscriptions (user_id, product_id, purchase_id, tradingview_username, end_date)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  stmt.run(userId, productId, purchaseId, tradingviewUsername, endDate.toISOString());
+
+  return { endDate, durationDays, indicator: product.tradingview_indicator };
+}
+
+// Отправка уведомления админу о новой подписке
+async function notifyAdminNewSubscription(user, product, tradingviewUsername, endDate) {
+  if (!ADMIN_TELEGRAM_ID) return;
+
+  const message = `🆕 НОВАЯ ПОДПИСКА!\n\n` +
+    `👤 Клиент: ${user.first_name || user.username || 'ID:' + user.telegram_id}\n` +
+    `📊 TradingView: @${tradingviewUsername}\n` +
+    `📦 Индикатор: ${product.tradingview_indicator || product.name}\n` +
+    `⏰ До: ${new Date(endDate).toLocaleDateString('ru-RU')}\n\n` +
+    `✅ Добавь @${tradingviewUsername} к индикатору!`;
+
+  await bot.telegram.sendMessage(ADMIN_TELEGRAM_ID, message);
+}
+
+// Отправка уведомления админу об истёкшей подписке
+async function notifyAdminExpiredSubscription(subscription) {
+  if (!ADMIN_TELEGRAM_ID) return;
+
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(subscription.user_id);
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(subscription.product_id);
+
+  const message = `⛔ ПОДПИСКА ИСТЕКЛА!\n\n` +
+    `👤 Клиент: ${user.first_name || user.username || 'ID:' + user.telegram_id}\n` +
+    `📊 TradingView: @${subscription.tradingview_username}\n` +
+    `📦 Индикатор: ${product.tradingview_indicator || product.name}\n\n` +
+    `❌ Удали @${subscription.tradingview_username} из индикатора!`;
+
+  await bot.telegram.sendMessage(ADMIN_TELEGRAM_ID, message);
+}
+
+// Проверка истекающих и истёкших подписок
+async function checkSubscriptions() {
+  console.log('🔄 Проверка подписок...');
+
+  const now = new Date();
+  const threeDaysLater = new Date();
+  threeDaysLater.setDate(now.getDate() + 3);
+
+  // Подписки истекающие через 3 дня (напоминание клиенту)
+  const expiringSoon = db.prepare(`
+    SELECT s.*, u.telegram_id, u.first_name, p.name as product_name
+    FROM subscriptions s
+    JOIN users u ON s.user_id = u.id
+    JOIN products p ON s.product_id = p.id
+    WHERE s.status = 'active'
+      AND s.notified_3days = 0
+      AND s.end_date <= ?
+      AND s.end_date > ?
+  `).all(threeDaysLater.toISOString(), now.toISOString());
+
+  for (const sub of expiringSoon) {
+    try {
+      await bot.telegram.sendMessage(sub.telegram_id,
+        `⚠️ Ваша подписка на "${sub.product_name}" истекает через 3 дня!\n\n` +
+        `📅 Дата окончания: ${new Date(sub.end_date).toLocaleDateString('ru-RU')}\n\n` +
+        `Продлите подписку в нашем магазине, чтобы не потерять доступ.`
+      );
+      db.prepare('UPDATE subscriptions SET notified_3days = 1 WHERE id = ?').run(sub.id);
+    } catch (e) {
+      console.error('Error notifying user:', e);
+    }
+  }
+
+  // Истёкшие подписки
+  const expired = db.prepare(`
+    SELECT s.*, u.telegram_id, u.first_name
+    FROM subscriptions s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.status = 'active' AND s.end_date <= ?
+  `).all(now.toISOString());
+
+  for (const sub of expired) {
+    try {
+      // Уведомление клиенту
+      await bot.telegram.sendMessage(sub.telegram_id,
+        `❌ Ваша подписка истекла!\n\n` +
+        `Доступ к индикатору будет отключён.\n` +
+        `Продлите подписку в нашем магазине.`
+      );
+
+      // Уведомление админу
+      await notifyAdminExpiredSubscription(sub);
+
+      // Обновляем статус
+      db.prepare(`UPDATE subscriptions SET status = 'expired', notified_expired = 1 WHERE id = ?`).run(sub.id);
+    } catch (e) {
+      console.error('Error processing expired subscription:', e);
+    }
+  }
+
+  console.log(`✅ Проверено: ${expiringSoon.length} истекающих, ${expired.length} истёкших`);
+}
+
+// Запуск проверки подписок каждый час
+setInterval(checkSubscriptions, 60 * 60 * 1000);
+// Первая проверка через 1 минуту после старта
+setTimeout(checkSubscriptions, 60 * 1000);
 
 // Команда /start
 bot.command('start', (ctx) => {
@@ -108,7 +229,37 @@ app.post('/api/users', (req, res) => {
   }
 });
 
-// Получение покупок пользователя
+// Получение активных подписок пользователя
+app.get('/api/subscriptions/:telegram_id', (req, res) => {
+  try {
+    const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(req.params.telegram_id);
+    if (!user) {
+      return res.json([]);
+    }
+
+    const subscriptions = db.prepare(`
+      SELECT
+        s.id,
+        s.tradingview_username,
+        s.start_date,
+        s.end_date,
+        s.status,
+        p.name as product_name,
+        p.tradingview_indicator,
+        p.duration_days
+      FROM subscriptions s
+      JOIN products p ON s.product_id = p.id
+      WHERE s.user_id = ?
+      ORDER BY s.end_date DESC
+    `).all(user.id);
+
+    res.json(subscriptions);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Получение покупок пользователя (legacy)
 app.get('/api/purchases/:telegram_id', (req, res) => {
   try {
     const purchases = db
@@ -131,14 +282,27 @@ app.get('/api/purchases/:telegram_id', (req, res) => {
 
 // Создание инвойса
 app.post('/api/create-invoice', async (req, res) => {
-  const { product_id, telegram_id } = req.body;
+  const { product_id, telegram_id, tradingview_username } = req.body;
+
+  // Проверка TradingView username
+  if (!tradingview_username || tradingview_username.trim().length < 2) {
+    return res.status(400).json({
+      success: false,
+      error: 'Введите ваш TradingView username'
+    });
+  }
 
   try {
+    // Сохраняем/обновляем пользователя с TradingView username
     db.prepare(
       'INSERT OR IGNORE INTO users (telegram_id) VALUES (?)'
     ).run(telegram_id);
 
-    const invoice = await payments.createInvoice(product_id, telegram_id);
+    db.prepare(
+      'UPDATE users SET tradingview_username = ? WHERE telegram_id = ?'
+    ).run(tradingview_username.trim(), telegram_id);
+
+    const invoice = await payments.createInvoice(product_id, telegram_id, tradingview_username.trim());
     res.json(invoice);
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -167,7 +331,8 @@ app.post('/api/crypto-webhook', async (req, res) => {
       const invoice = req.body.payload;
       const payload = JSON.parse(invoice.payload);
 
-      db.prepare(
+      // Обновляем статус покупки
+      const purchaseResult = db.prepare(
         `UPDATE purchases SET status = 'paid'
          WHERE id = (
            SELECT id FROM purchases
@@ -176,26 +341,42 @@ app.post('/api/crypto-webhook', async (req, res) => {
          )`
       ).run(payload.user_id, payload.product_id);
 
-      const product = db
-        .prepare('SELECT * FROM products WHERE id = ?')
-        .get(payload.product_id);
+      // Получаем ID покупки
+      const purchase = db.prepare(
+        `SELECT id FROM purchases
+         WHERE user_id = ? AND product_id = ? AND status = 'paid'
+         ORDER BY created_at DESC LIMIT 1`
+      ).get(payload.user_id, payload.product_id);
 
-      await bot.telegram.sendMessage(
-        payload.telegram_id,
-        `✅ Оплата получена!\n\n📦 ${product.name}`
+      const product = db.prepare('SELECT * FROM products WHERE id = ?').get(payload.product_id);
+      const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.user_id);
+
+      // Создаём подписку
+      const tradingviewUsername = payload.tradingview_username || user.tradingview_username;
+      const subInfo = createSubscription(
+        payload.user_id,
+        payload.product_id,
+        purchase.id,
+        tradingviewUsername
       );
 
-      if (product.file_url) {
-        const path = require('path');
-        await bot.telegram.sendDocument(
-          payload.telegram_id,
-          { source: path.join(__dirname, product.file_url) }
-        );
-      }
+      // Уведомление клиенту
+      await bot.telegram.sendMessage(
+        payload.telegram_id,
+        `✅ Оплата получена!\n\n` +
+        `📦 ${product.name}\n` +
+        `📊 TradingView: @${tradingviewUsername}\n` +
+        `⏰ Доступ до: ${subInfo.endDate.toLocaleDateString('ru-RU')}\n\n` +
+        `Доступ к индикатору будет предоставлен в течение нескольких минут.`
+      );
+
+      // Уведомление админу
+      await notifyAdminNewSubscription(user, product, tradingviewUsername, subInfo.endDate);
     }
 
     res.json({ ok: true });
   } catch (e) {
+    console.error('Webhook error:', e);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
@@ -309,6 +490,34 @@ app.get('/api/admin/users', adminAuth, (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// Get all subscriptions
+app.get('/api/admin/subscriptions', adminAuth, (req, res) => {
+  try {
+    const subscriptions = db.prepare(`
+      SELECT
+        s.id,
+        s.tradingview_username,
+        s.start_date,
+        s.end_date,
+        s.status,
+        p.name as product_name,
+        p.tradingview_indicator,
+        u.telegram_id,
+        u.username,
+        u.first_name
+      FROM subscriptions s
+      JOIN products p ON s.product_id = p.id
+      JOIN users u ON s.user_id = u.id
+      ORDER BY s.end_date DESC
+    `).all();
+
+    res.json(subscriptions);
+  } catch (error) {
+    console.error('Error getting subscriptions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get user statistics
 app.get('/api/admin/user-stats', adminAuth, (req, res) => {
   try {
@@ -330,22 +539,22 @@ app.get('/api/admin/user-stats', adminAuth, (req, res) => {
 // Add new product
 app.post('/api/admin/products', adminAuth, (req, res) => {
   try {
-    const { name, description, price } = req.body;
-    
-    console.log('Creating product:', { name, description, price });
-    
+    const { name, description, price, duration_days, tradingview_indicator } = req.body;
+
+    console.log('Creating product:', { name, description, price, duration_days, tradingview_indicator });
+
     const stmt = db.prepare(`
-      INSERT INTO products (name, description, price, file_url)
-      VALUES (?, ?, ?, NULL)
+      INSERT INTO products (name, description, price, duration_days, tradingview_indicator, file_url)
+      VALUES (?, ?, ?, ?, ?, NULL)
     `);
-    
-    const result = stmt.run(name, description, price);
-    
+
+    const result = stmt.run(name, description, price, duration_days || 30, tradingview_indicator || '');
+
     console.log('Product created with ID:', result.lastInsertRowid);
-    
-    res.json({ 
-      success: true, 
-      id: result.lastInsertRowid 
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid
     });
   } catch (error) {
     console.error('Error adding product:', error);
@@ -357,20 +566,20 @@ app.post('/api/admin/products', adminAuth, (req, res) => {
 app.put('/api/admin/products/:id', adminAuth, (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price } = req.body;
-    
-    console.log('Updating product:', { id, name, description, price });
-    
+    const { name, description, price, duration_days, tradingview_indicator } = req.body;
+
+    console.log('Updating product:', { id, name, description, price, duration_days, tradingview_indicator });
+
     const stmt = db.prepare(`
-      UPDATE products 
-      SET name = ?, description = ?, price = ?
+      UPDATE products
+      SET name = ?, description = ?, price = ?, duration_days = ?, tradingview_indicator = ?
       WHERE id = ?
     `);
-    
-    const result = stmt.run(name, description, price, id);
-    
+
+    const result = stmt.run(name, description, price, duration_days || 30, tradingview_indicator || '', id);
+
     console.log('Product updated, changes:', result.changes);
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating product:', error);

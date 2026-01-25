@@ -468,7 +468,7 @@
 
     <div class="tabs">
       <button class="tab active" onclick="showTab('products')">CATALOG</button>
-      <button class="tab" onclick="showTab('purchases')">MY PURCHASES</button>
+      <button class="tab" onclick="showTab('purchases')">MY SUBSCRIPTIONS</button>
     </div>
 
     <div id="products" class="products">
@@ -477,6 +477,21 @@
 
     <div id="purchases" class="purchases">
       <div class="loading"></div>
+    </div>
+  </div>
+
+  <!-- TradingView Username Modal -->
+  <div id="tv-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; justify-content:center; align-items:center; padding:20px;">
+    <div style="background:#0d0d0d; border:2px solid #00ff41; padding:30px; max-width:400px; width:100%;">
+      <h3 style="font-family:'VT323',monospace; font-size:24px; margin-bottom:20px; text-align:center;">ENTER TRADINGVIEW USERNAME</h3>
+      <p style="font-size:12px; color:rgba(0,255,65,0.7); margin-bottom:20px; text-align:center;">
+        We need your TradingView username to grant access to the indicator
+      </p>
+      <input type="text" id="tv-username" placeholder="@your_username" style="width:100%; padding:15px; background:rgba(20,20,20,0.8); border:1px solid rgba(0,255,65,0.3); color:#00ff41; font-family:'IBM Plex Mono',monospace; font-size:16px; margin-bottom:20px;">
+      <div style="display:flex; gap:10px;">
+        <button onclick="closeModal()" style="flex:1; padding:15px; background:transparent; border:2px solid #ff4136; color:#ff4136; font-family:'IBM Plex Mono',monospace; cursor:pointer;">CANCEL</button>
+        <button onclick="confirmPurchase()" style="flex:1; padding:15px; background:rgba(0,255,65,0.1); border:2px solid #00ff41; color:#00ff41; font-family:'IBM Plex Mono',monospace; cursor:pointer;">CONTINUE</button>
+      </div>
     </div>
   </div>
 
@@ -491,70 +506,92 @@
       : 'https://trade-boost.onrender.com/api';
     const user = tg.initDataUnsafe?.user;
 
+    let selectedProductId = null;
+
     function showTab(tab) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
-      
+
       document.getElementById('products').style.display = tab === 'products' ? 'flex' : 'none';
       document.getElementById('purchases').style.display = tab === 'purchases' ? 'block' : 'none';
-      
+
       if (tab === 'purchases') {
-        loadPurchases();
+        loadSubscriptions();
       }
+    }
+
+    function getDurationText(days) {
+      if (days === 30) return '1 month';
+      if (days === 90) return '3 months';
+      if (days === 365) return '1 year';
+      return days + ' days';
     }
 
     async function loadProducts() {
       try {
         const response = await fetch(API_URL + '/products');
         const products = await response.json();
-        
+
         const productsDiv = document.getElementById('products');
-        productsDiv.innerHTML = products.map(product => 
+        productsDiv.innerHTML = products.map(product =>
           '<div class="product-card">' +
             '<div class="product-header">' +
               '<div class="product-title">' + product.name + '</div>' +
               '<div class="product-price">$' + product.price + '</div>' +
             '</div>' +
             '<div class="product-description">' + product.description + '</div>' +
-            '<div class="product-badge">TradingView Compatible</div>' +
+            '<div class="product-badge">' + getDurationText(product.duration_days || 30) + ' access</div>' +
             '<button class="buy-button" onclick="buyProduct(' + product.id + ')">' +
-              'Purchase $' + product.price +
+              'Subscribe $' + product.price +
             '</button>' +
           '</div>'
         ).join('');
       } catch (error) {
         console.error('Error loading products:', error);
-        document.getElementById('products').innerHTML = 
+        document.getElementById('products').innerHTML =
           '<div class="empty">ERROR LOADING DATA</div>';
       }
     }
 
-    async function buyProduct(productId) {
+    function buyProduct(productId) {
       if (!user) {
         tg.showAlert('ERROR: User data unavailable');
         return;
       }
+      selectedProductId = productId;
+      document.getElementById('tv-modal').style.display = 'flex';
+      document.getElementById('tv-username').focus();
+    }
 
-      const button = event.target;
-      button.disabled = true;
-      button.textContent = '> PROCESSING...';
+    function closeModal() {
+      document.getElementById('tv-modal').style.display = 'none';
+      selectedProductId = null;
+    }
+
+    async function confirmPurchase() {
+      const tvUsername = document.getElementById('tv-username').value.trim().replace('@', '');
+
+      if (!tvUsername || tvUsername.length < 2) {
+        tg.showAlert('Please enter your TradingView username');
+        return;
+      }
+
+      closeModal();
 
       try {
         const response = await fetch(API_URL + '/create-invoice', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            product_id: productId,
+            product_id: selectedProductId,
             telegram_id: user.id,
-            username: user.username,
-            first_name: user.first_name
+            tradingview_username: tvUsername
           })
         });
 
         const result = await response.json();
 
         if (result.success) {
-          // CryptoBot link is a Telegram link (t.me/...)
           if (result.pay_url.includes('t.me')) {
             tg.openTelegramLink(result.pay_url);
           } else {
@@ -566,62 +603,48 @@
       } catch (error) {
         console.error('Error:', error);
         tg.showAlert('ERROR: Payment creation failed');
-      } finally {
-        button.disabled = false;
-        button.textContent = button.textContent.replace('> PROCESSING...', '> PURCHASE');
       }
     }
 
-    async function loadPurchases() {
+    async function loadSubscriptions() {
       if (!user) return;
 
       try {
-        const response = await fetch(API_URL + '/purchases/' + user.id);
-        const purchases = await response.json();
-        
+        const response = await fetch(API_URL + '/subscriptions/' + user.id);
+        const subscriptions = await response.json();
+
         const purchasesDiv = document.getElementById('purchases');
-        
-        if (purchases.length === 0) {
-          purchasesDiv.innerHTML = '<div class="empty">NO PURCHASES FOUND</div>';
+
+        if (subscriptions.length === 0) {
+          purchasesDiv.innerHTML = '<div class="empty">NO SUBSCRIPTIONS FOUND</div>';
           return;
         }
 
-        purchasesDiv.innerHTML = purchases.map(purchase => {
-          const date = new Date(purchase.created_at).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-          
-          return '<div class="purchase-card">' +
-            '<div class="purchase-date">' + date + '</div>' +
-            '<div class="purchase-name">' + purchase.name + '</div>' +
-            '<div class="purchase-description">' + purchase.description + '</div>' +
-            '<div class="purchase-status">$' + purchase.amount + '</div>' +
-            (purchase.file_url ? 
-              '<button class="download-button" onclick="downloadFile(' + purchase.purchase_id + ')">' +
-                'DOWNLOAD FILE' +
-              '</button>'
-            : '') +
+        purchasesDiv.innerHTML = subscriptions.map(sub => {
+          const endDate = new Date(sub.end_date);
+          const now = new Date();
+          const isActive = sub.status === 'active' && endDate > now;
+          const daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+
+          return '<div class="purchase-card" style="border-color:' + (isActive ? '#00ff41' : '#ff4136') + ';">' +
+            '<div class="purchase-date" style="color:' + (isActive ? '#00ff41' : '#ff4136') + ';">' +
+              (isActive ? 'ACTIVE' : 'EXPIRED') +
+            '</div>' +
+            '<div class="purchase-name">' + sub.product_name + '</div>' +
+            '<div class="purchase-description">TradingView: @' + sub.tradingview_username + '</div>' +
+            '<div class="purchase-status">' +
+              (isActive ? daysLeft + ' days left' : 'Expired ' + endDate.toLocaleDateString()) +
+            '</div>' +
+            '<div style="font-size:11px; color:rgba(0,255,65,0.5); margin-top:10px;">' +
+              'Valid until: ' + endDate.toLocaleDateString() +
+            '</div>' +
           '</div>';
         }).join('');
       } catch (error) {
-        console.error('Error loading purchases:', error);
-        document.getElementById('purchases').innerHTML = 
-          '<div class="empty">ERROR LOADING PURCHASES</div>';
+        console.error('Error loading subscriptions:', error);
+        document.getElementById('purchases').innerHTML =
+          '<div class="empty">ERROR LOADING SUBSCRIPTIONS</div>';
       }
-    }
-
-    function downloadFile(purchaseId) {
-      if (!user) {
-        tg.showAlert('ERROR: User data unavailable');
-        return;
-      }
-      
-      const downloadUrl = API_URL + '/download/' + purchaseId + '?telegram_id=' + user.id;
-      window.open(downloadUrl, '_blank');
     }
 
     loadProducts();
