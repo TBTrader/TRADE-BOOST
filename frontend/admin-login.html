@@ -113,22 +113,47 @@
   </div>
 
   <script>
-    const ADMIN_PASSWORD = 'tradeboost2025';
+    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000/api'
+      : 'https://trade-boost.onrender.com/api';
 
-    function login(event) {
+    async function login(event) {
       event.preventDefault();
-      
+
       const password = document.getElementById('password').value;
       const errorDiv = document.getElementById('error');
-      
-      if (password === ADMIN_PASSWORD) {
-        sessionStorage.setItem('admin_authenticated', 'true');
-        window.location.href = 'admin.html';
-      } else {
+      const btn = document.querySelector('.btn');
+
+      btn.disabled = true;
+      btn.textContent = 'VERIFYING...';
+
+      try {
+        const response = await fetch(API_URL + '/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          sessionStorage.setItem('admin_authenticated', 'true');
+          sessionStorage.setItem('admin_token', password);
+          window.location.href = 'admin.html';
+        } else {
+          errorDiv.classList.add('show');
+          setTimeout(() => errorDiv.classList.remove('show'), 3000);
+        }
+      } catch (e) {
+        errorDiv.textContent = 'CONNECTION ERROR';
         errorDiv.classList.add('show');
         setTimeout(() => {
+          errorDiv.textContent = 'INCORRECT PASSWORD';
           errorDiv.classList.remove('show');
         }, 3000);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'ACCESS';
       }
     }
   </script>

@@ -508,6 +508,14 @@
 
     let selectedProductId = null;
 
+    // XSS protection - escape HTML entities
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     function showTab(tab) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
@@ -536,10 +544,10 @@
         productsDiv.innerHTML = products.map(product =>
           '<div class="product-card">' +
             '<div class="product-header">' +
-              '<div class="product-title">' + product.name + '</div>' +
+              '<div class="product-title">' + escapeHtml(product.name) + '</div>' +
               '<div class="product-price">$' + product.price + '</div>' +
             '</div>' +
-            '<div class="product-description">' + product.description + '</div>' +
+            '<div class="product-description">' + escapeHtml(product.description) + '</div>' +
             '<div class="product-badge">' + getDurationText(product.duration_days || 30) + ' access</div>' +
             '<button class="buy-button" onclick="buyProduct(' + product.id + ')">' +
               'Subscribe $' + product.price +
@@ -630,8 +638,8 @@
             '<div class="purchase-date" style="color:' + (isActive ? '#00ff41' : '#ff4136') + ';">' +
               (isActive ? 'ACTIVE' : 'EXPIRED') +
             '</div>' +
-            '<div class="purchase-name">' + sub.product_name + '</div>' +
-            '<div class="purchase-description">TradingView: @' + sub.tradingview_username + '</div>' +
+            '<div class="purchase-name">' + escapeHtml(sub.product_name) + '</div>' +
+            '<div class="purchase-description">TradingView: @' + escapeHtml(sub.tradingview_username) + '</div>' +
             '<div class="purchase-status">' +
               (isActive ? daysLeft + ' days left' : 'Expired ' + endDate.toLocaleDateString()) +
             '</div>' +

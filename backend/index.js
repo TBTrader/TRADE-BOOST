@@ -2,6 +2,7 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -44,6 +45,25 @@ const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Rate limiting для защиты от брутфорса
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 5, // максимум 5 попыток
+  message: { error: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 минута
+  max: 100, // 100 запросов в минуту
+  message: { error: 'Too many requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api/', apiLimiter);
 
 // ===== ФУНКЦИИ ПОДПИСОК =====
 
@@ -391,16 +411,33 @@ if (process.env.NODE_ENV === 'production') {
 }
 // ===== ADMIN ENDPOINTS =====
 
-// Admin authentication middleware
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'tradeboost2025';
+// Admin authentication
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+
+if (!ADMIN_TOKEN) {
+  console.warn('⚠️  WARNING: ADMIN_TOKEN not set! Admin panel will be inaccessible.');
+}
 
 function adminAuth(req, res, next) {
   const token = req.headers['x-admin-token'];
-  if (token !== ADMIN_TOKEN) {
+  if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
 }
+
+// Admin login endpoint (with rate limiting)
+app.post('/api/admin/login', loginLimiter, (req, res) => {
+  const { token } = req.body;
+  if (!ADMIN_TOKEN) {
+    return res.status(500).json({ success: false, error: 'Admin token not configured' });
+  }
+  if (token === ADMIN_TOKEN) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, error: 'Invalid token' });
+  }
+});
 
 // Get sales statistics
 app.get('/api/admin/stats', adminAuth, (req, res) => {
