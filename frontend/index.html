@@ -480,20 +480,6 @@
     </div>
   </div>
 
-  <!-- TradingView Username Modal -->
-  <div id="tv-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; justify-content:center; align-items:center; padding:20px;">
-    <div style="background:#0d0d0d; border:2px solid #00ff41; padding:30px; max-width:400px; width:100%;">
-      <h3 style="font-family:'VT323',monospace; font-size:24px; margin-bottom:20px; text-align:center;">ENTER TRADINGVIEW USERNAME</h3>
-      <p style="font-size:12px; color:rgba(0,255,65,0.7); margin-bottom:20px; text-align:center;">
-        We need your TradingView username to grant access to the indicator
-      </p>
-      <input type="text" id="tv-username" placeholder="@your_username" style="width:100%; padding:15px; background:rgba(20,20,20,0.8); border:1px solid rgba(0,255,65,0.3); color:#00ff41; font-family:'IBM Plex Mono',monospace; font-size:16px; margin-bottom:20px;">
-      <div style="display:flex; gap:10px;">
-        <button onclick="closeModal()" style="flex:1; padding:15px; background:transparent; border:2px solid #ff4136; color:#ff4136; font-family:'IBM Plex Mono',monospace; cursor:pointer;">CANCEL</button>
-        <button onclick="confirmPurchase()" style="flex:1; padding:15px; background:rgba(0,255,65,0.1); border:2px solid #00ff41; color:#00ff41; font-family:'IBM Plex Mono',monospace; cursor:pointer;">CONTINUE</button>
-      </div>
-    </div>
-  </div>
 
   <script>
     const tg = window.Telegram.WebApp;
@@ -505,8 +491,6 @@
       ? 'http://localhost:3000/api'
       : 'https://trade-boost.onrender.com/api';
     const user = tg.initDataUnsafe?.user;
-
-    let selectedProductId = null;
 
     // XSS protection - escape HTML entities
     function escapeHtml(text) {
@@ -561,39 +545,19 @@
       }
     }
 
-    function buyProduct(productId) {
+    async function buyProduct(productId) {
       if (!user) {
         tg.showAlert('ERROR: User data unavailable');
         return;
       }
-      selectedProductId = productId;
-      document.getElementById('tv-modal').style.display = 'flex';
-      document.getElementById('tv-username').focus();
-    }
-
-    function closeModal() {
-      document.getElementById('tv-modal').style.display = 'none';
-      selectedProductId = null;
-    }
-
-    async function confirmPurchase() {
-      const tvUsername = document.getElementById('tv-username').value.trim().replace('@', '');
-
-      if (!tvUsername || tvUsername.length < 2) {
-        tg.showAlert('Please enter your TradingView username');
-        return;
-      }
-
-      closeModal();
 
       try {
         const response = await fetch(API_URL + '/create-invoice', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            product_id: selectedProductId,
-            telegram_id: user.id,
-            tradingview_username: tvUsername
+            product_id: productId,
+            telegram_id: user.id
           })
         });
 

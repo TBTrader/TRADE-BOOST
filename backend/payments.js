@@ -5,7 +5,7 @@ const CRYPTO_BOT_API = 'https://pay.crypt.bot/api';
 const CRYPTO_BOT_TOKEN = process.env.CRYPTO_BOT_TOKEN;
 
 // Создание инвойса для оплаты
-async function createInvoice(productId, telegramId, tradingviewUsername) {
+async function createInvoice(productId, telegramId) {
   try {
     const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
     if (!product) {
@@ -24,7 +24,7 @@ async function createInvoice(productId, telegramId, tradingviewUsername) {
     if (durationDays === 90) durationText = '3 месяца';
     if (durationDays === 365) durationText = '1 год';
 
-    const description = `${product.name} (${durationText}) для @${tradingviewUsername}`;
+    const description = `${product.name} (${durationText})`;
 
     // Создаём инвойс через прямой HTTP запрос
     const response = await fetch(`${CRYPTO_BOT_API}/createInvoice`, {
@@ -44,8 +44,7 @@ async function createInvoice(productId, telegramId, tradingviewUsername) {
         payload: JSON.stringify({
           product_id: productId,
           user_id: user.id,
-          telegram_id: telegramId,
-          tradingview_username: tradingviewUsername
+          telegram_id: telegramId
         })
       })
     });

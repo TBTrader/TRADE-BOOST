@@ -302,27 +302,15 @@ app.get('/api/purchases/:telegram_id', (req, res) => {
 
 // Создание инвойса
 app.post('/api/create-invoice', async (req, res) => {
-  const { product_id, telegram_id, tradingview_username } = req.body;
-
-  // Проверка TradingView username
-  if (!tradingview_username || tradingview_username.trim().length < 2) {
-    return res.status(400).json({
-      success: false,
-      error: 'Введите ваш TradingView username'
-    });
-  }
+  const { product_id, telegram_id } = req.body;
 
   try {
-    // Сохраняем/обновляем пользователя с TradingView username
+    // Создаём пользователя если не существует
     db.prepare(
       'INSERT OR IGNORE INTO users (telegram_id) VALUES (?)'
     ).run(telegram_id);
 
-    db.prepare(
-      'UPDATE users SET tradingview_username = ? WHERE telegram_id = ?'
-    ).run(tradingview_username.trim(), telegram_id);
-
-    const invoice = await payments.createInvoice(product_id, telegram_id, tradingview_username.trim());
+    const invoice = await payments.createInvoice(product_id, telegram_id);
     res.json(invoice);
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -336,6 +324,9 @@ function verifyCryptoBotSignature(body, signature) {
   const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
   return hmac === signature;
 }
+
+// Хранилище ожидающих ввода TradingView username
+const pendingTvUsername = new Map();
 
 // Webhook CryptoBot
 app.post('/api/crypto-webhook', async (req, res) => {
@@ -352,7 +343,7 @@ app.post('/api/crypto-webhook', async (req, res) => {
       const payload = JSON.parse(invoice.payload);
 
       // Обновляем статус покупки
-      const purchaseResult = db.prepare(
+      db.prepare(
         `UPDATE purchases SET status = 'paid'
          WHERE id = (
            SELECT id FROM purchases
@@ -369,35 +360,86 @@ app.post('/api/crypto-webhook', async (req, res) => {
       ).get(payload.user_id, payload.product_id);
 
       const product = db.prepare('SELECT * FROM products WHERE id = ?').get(payload.product_id);
-      const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.user_id);
 
-      // Создаём подписку
-      const tradingviewUsername = payload.tradingview_username || user.tradingview_username;
-      const subInfo = createSubscription(
-        payload.user_id,
-        payload.product_id,
-        purchase.id,
-        tradingviewUsername
-      );
+      // Сохраняем информацию о покупке, ожидающей ввода TradingView username
+      pendingTvUsername.set(payload.telegram_id, {
+        user_id: payload.user_id,
+        product_id: payload.product_id,
+        purchase_id: purchase.id,
+        product_name: product.name
+      });
 
-      // Уведомление клиенту
+      // Просим пользователя ввести TradingView username
       await bot.telegram.sendMessage(
         payload.telegram_id,
-        `✅ Оплата получена!\n\n` +
-        `📦 ${product.name}\n` +
-        `📊 TradingView: @${tradingviewUsername}\n` +
-        `⏰ Доступ до: ${subInfo.endDate.toLocaleDateString('ru-RU')}\n\n` +
-        `Доступ к индикатору будет предоставлен в течение нескольких минут.`
+        `✅ Оплата получена! Спасибо за покупку!\n\n` +
+        `📦 ${product.name}\n\n` +
+        `📝 Теперь введите ваш TradingView username (без @):\n` +
+        `Например: my_trading_name`
       );
-
-      // Уведомление админу
-      await notifyAdminNewSubscription(user, product, tradingviewUsername, subInfo.endDate);
     }
 
     res.json({ ok: true });
   } catch (e) {
     console.error('Webhook error:', e);
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Обработка ввода TradingView username от пользователя
+bot.on('text', async (ctx) => {
+  const telegramId = ctx.from.id;
+  const text = ctx.message.text.trim();
+
+  // Игнорируем команды
+  if (text.startsWith('/')) return;
+
+  // Проверяем, ожидает ли этот пользователь ввода username
+  const pendingData = pendingTvUsername.get(telegramId);
+  if (!pendingData) return;
+
+  // Убираем @ если пользователь его добавил
+  const tradingviewUsername = text.replace(/^@/, '').trim();
+
+  if (tradingviewUsername.length < 2) {
+    await ctx.reply('❌ Username слишком короткий. Введите корректный TradingView username:');
+    return;
+  }
+
+  try {
+    // Сохраняем username пользователя
+    db.prepare('UPDATE users SET tradingview_username = ? WHERE telegram_id = ?')
+      .run(tradingviewUsername, telegramId);
+
+    // Создаём подписку
+    const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId);
+    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(pendingData.product_id);
+
+    const subInfo = createSubscription(
+      pendingData.user_id,
+      pendingData.product_id,
+      pendingData.purchase_id,
+      tradingviewUsername
+    );
+
+    // Удаляем из ожидающих
+    pendingTvUsername.delete(telegramId);
+
+    // Уведомление клиенту
+    await ctx.reply(
+      `🎉 Отлично! Подписка активирована!\n\n` +
+      `📦 ${product.name}\n` +
+      `📊 TradingView: @${tradingviewUsername}\n` +
+      `⏰ Доступ до: ${subInfo.endDate.toLocaleDateString('ru-RU')}\n\n` +
+      `✅ Доступ к индикатору будет предоставлен в течение нескольких минут.`
+    );
+
+    // Уведомление админу
+    await notifyAdminNewSubscription(user, product, tradingviewUsername, subInfo.endDate);
+
+  } catch (e) {
+    console.error('Error processing TV username:', e);
+    await ctx.reply('❌ Произошла ошибка. Пожалуйста, попробуйте ещё раз или обратитесь в поддержку.');
   }
 });
 
