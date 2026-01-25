@@ -317,6 +317,32 @@ app.post('/api/create-invoice', async (req, res) => {
   }
 });
 
+// Test CryptoBot connection
+app.get('/api/test-cryptobot', async (req, res) => {
+  try {
+    const fetch = require('node-fetch');
+    const response = await fetch('https://pay.crypt.bot/api/getMe', {
+      headers: {
+        'Crypto-Pay-API-Token': process.env.CRYPTO_BOT_TOKEN
+      }
+    });
+    const data = await response.json();
+
+    if (data.ok) {
+      res.json({
+        success: true,
+        app_id: data.result.app_id,
+        name: data.result.name,
+        payment_processing_bot_username: data.result.payment_processing_bot_username
+      });
+    } else {
+      res.json({ success: false, error: data.error });
+    }
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Verify CryptoBot webhook signature
 function verifyCryptoBotSignature(body, signature) {
   const secret = crypto.createHash('sha256').update(process.env.CRYPTO_BOT_TOKEN).digest();

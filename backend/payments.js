@@ -50,9 +50,11 @@ async function createInvoice(productId, telegramId) {
     });
 
     const data = await response.json();
+    console.log('CryptoBot API response:', JSON.stringify(data, null, 2));
 
     if (!data.ok) {
-      throw new Error(data.error?.name || 'Ошибка создания инвойса');
+      console.error('CryptoBot error:', data.error);
+      throw new Error(data.error?.name || data.error?.code || 'Ошибка создания инвойса');
     }
 
     // Сохраняем покупку в БД
@@ -62,9 +64,15 @@ async function createInvoice(productId, telegramId) {
     `);
     stmt.run(user.id, productId, product.price);
 
+    console.log('CryptoBot invoice created:', {
+      pay_url: data.result.pay_url,
+      mini_app_invoice_url: data.result.mini_app_invoice_url,
+      invoice_id: data.result.invoice_id
+    });
+
     return {
       success: true,
-      pay_url: data.result.pay_url,
+      pay_url: data.result.mini_app_invoice_url || data.result.pay_url,
       invoice_id: data.result.invoice_id
     };
   } catch (error) {

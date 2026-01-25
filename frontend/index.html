@@ -562,15 +562,41 @@
         });
 
         const result = await response.json();
+        console.log('Invoice result:', result);
 
         if (result.success) {
-          if (result.pay_url.includes('t.me')) {
-            tg.openTelegramLink(result.pay_url);
+          const payUrl = result.pay_url;
+          console.log('Opening payment URL:', payUrl);
+          console.log('Platform:', tg.platform);
+
+          // Check if desktop platform (tdesktop, macos, web)
+          const isDesktop = ['tdesktop', 'macos', 'web', 'weba', 'webk'].includes(tg.platform);
+
+          if (isDesktop) {
+            // On desktop, show popup with link instead of closing the app
+            tg.showPopup({
+              title: 'Payment',
+              message: 'Click the button below to open payment page. After payment, return to Telegram.',
+              buttons: [
+                { id: 'pay', type: 'default', text: 'Open Payment' },
+                { id: 'cancel', type: 'cancel' }
+              ]
+            }, function(buttonId) {
+              if (buttonId === 'pay') {
+                // Use window.open for desktop to not close the Mini App
+                window.open(payUrl, '_blank');
+              }
+            });
           } else {
-            tg.openLink(result.pay_url);
+            // Mobile - use native Telegram methods
+            if (payUrl.includes('t.me/')) {
+              tg.openTelegramLink(payUrl);
+            } else {
+              tg.openLink(payUrl, { try_instant_view: false });
+            }
           }
         } else {
-          tg.showAlert('ERROR: ' + result.error);
+          tg.showAlert('ERROR: ' + (result.error || 'Unknown error'));
         }
       } catch (error) {
         console.error('Error:', error);
